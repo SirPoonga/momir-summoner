@@ -5,7 +5,7 @@
   <title>Settings - Momir Summoner</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#111111">
-  <link rel="stylesheet" href="/static/style.css?v=22">
+  <link rel="stylesheet" href="/static/style.css?v=23">
 </head>
 <body>
   <main class="settings-page">
@@ -21,35 +21,7 @@
       >↻</button>
     </header>
 
-    <section class="panel">
-      <h2>Printer</h2>
-      <div id="settingsPrinterStatus" class="printer unknown">Checking printer...</div>
-      <div id="settingsPrinterDetails" class="settings-note hidden"></div>
-    </section>
-
-    <section class="panel">
-      <h2>Network</h2>
-      <div class="settings-list">
-        <div class="settings-row">
-          <span class="settings-label">Wi-Fi</span>
-          <span id="networkWifi" class="settings-value">Loading...</span>
-        </div>
-        <div class="settings-row">
-          <span class="settings-label">Local address</span>
-          <a id="networkLocalUrl" class="settings-value settings-value-link" href="/">Loading...</a>
-        </div>
-        <div class="settings-row">
-          <span class="settings-label">IP address</span>
-          <span id="networkIp" class="settings-value">Loading...</span>
-        </div>
-        <div class="settings-row">
-          <span class="settings-label">Tailscale</span>
-          <span id="networkTailscale" class="settings-value">Loading...</span>
-        </div>
-      </div>
-    </section>
-
-    <section class="panel update-panel">
+<section class="panel update-panel">
       <h2>Card Database</h2>
       <div class="settings-list database-summary">
         <div class="settings-row">
@@ -87,7 +59,69 @@
       </div>
     </section>
 
+<section class="panel">
+      <h2>Printer</h2>
+      <div id="settingsPrinterStatus" class="printer unknown">Checking printer...</div>
+      <div id="settingsPrinterDetails" class="settings-note hidden"></div>
+
+      <div class="printer-margin-settings">
+        <h3>Print Margins</h3>
+        <p class="settings-note">
+          Values are pixels on the 450 × 730 print canvas. Larger values move
+          the card content farther inward from that edge. These settings apply
+          to the currently configured printer.
+        </p>
+        <form id="printerMarginForm">
+          <div class="margin-grid">
+            <label class="margin-field">
+              <span>Left</span>
+              <input id="marginLeft" name="left" type="number" min="0" max="250" step="1" inputmode="numeric" required>
+            </label>
+            <label class="margin-field">
+              <span>Top</span>
+              <input id="marginTop" name="top" type="number" min="0" max="250" step="1" inputmode="numeric" required>
+            </label>
+            <label class="margin-field">
+              <span>Right</span>
+              <input id="marginRight" name="right" type="number" min="0" max="250" step="1" inputmode="numeric" required>
+            </label>
+            <label class="margin-field">
+              <span>Bottom</span>
+              <input id="marginBottom" name="bottom" type="number" min="0" max="250" step="1" inputmode="numeric" required>
+            </label>
+          </div>
+          <div class="margin-actions">
+            <button id="savePrinterMarginsBtn" type="submit">Save Margins</button>
+            <button id="defaultPrinterMarginsBtn" type="button" class="secondary-button">Restore Defaults</button>
+          </div>
+          <div id="printerMarginStatus" class="settings-note margin-message" aria-live="polite"></div>
+        </form>
+      </div>
+    </section>
+
     <section class="panel">
+      <h2>Network</h2>
+      <div class="settings-list">
+        <div class="settings-row">
+          <span class="settings-label">Wi-Fi</span>
+          <span id="networkWifi" class="settings-value">Loading...</span>
+        </div>
+        <div class="settings-row">
+          <span class="settings-label">Local address</span>
+          <a id="networkLocalUrl" class="settings-value settings-value-link" href="/">Loading...</a>
+        </div>
+        <div class="settings-row">
+          <span class="settings-label">IP address</span>
+          <span id="networkIp" class="settings-value">Loading...</span>
+        </div>
+        <div class="settings-row">
+          <span class="settings-label">Tailscale</span>
+          <span id="networkTailscale" class="settings-value">Loading...</span>
+        </div>
+      </div>
+    </section>
+
+<section class="panel">
       <h2>System Status</h2>
       <div class="settings-list">
         <div class="settings-row">
@@ -103,6 +137,6 @@
     </section>
   </main>
 
-  <script src="/static/settings.js?v=1"></script>
+  <script src="/static/settings.js?v=2"></script>
 </body>
 </html>

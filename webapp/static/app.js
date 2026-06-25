@@ -74,7 +74,7 @@ async function loadPreview(previewUrl, cardName) {
   try {
     const response = await fetch(previewUrl, {
       signal: controller.signal,
-      cache: "force-cache",
+      cache: "no-store",
     });
     if (!response.ok) throw new Error(`Preview failed (${response.status})`);
 
@@ -294,10 +294,33 @@ function selectSearchedCard(id) {
   );
 }
 
+
+function restoreSelectedCardFromDashboard(stats) {
+  if (lastCard || !stats?.last_card) return;
+
+  const card = stats.last_card;
+  if (!card.id) return;
+
+  const cardId = encodeURIComponent(card.id);
+  const cacheVersion = Date.now();
+  const previewUrl = `/preview/card/${cardId}.jpg?v=${cacheVersion}`;
+  const backPreviewUrl = card.has_back
+    ? `/preview/card/${cardId}/back.jpg?v=${cacheVersion}`
+    : null;
+
+  showCard(card, previewUrl, backPreviewUrl);
+
+  if (card.mana_value !== null && card.mana_value !== undefined) {
+    setSelectedMana(card.mana_value);
+  }
+}
+
 function updateDashboard(data) {
   const printer = data.printer || {};
   const network = data.network || {};
   const stats = data.status || {};
+
+  restoreSelectedCardFromDashboard(stats);
 
   const printerElement = $("printerStatus");
   printerElement.textContent = printer.message || "Printer status unknown";

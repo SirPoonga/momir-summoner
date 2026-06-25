@@ -7,7 +7,12 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from flask import Flask, jsonify, render_template, request, send_file
-from momir_config import get_web_host, get_web_port
+from momir_config import (
+    get_printer_margins,
+    get_web_host,
+    get_web_port,
+    save_printer_margins,
+)
 
 from momir_adapter import (
     card_details,
@@ -34,7 +39,7 @@ app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 3600
 @app.after_request
 def add_response_headers(response):
     # API state should never be replayed from a mobile browser cache.
-    if request.path.startswith("/api/"):
+    if request.path.startswith("/api/") or request.path.startswith("/preview/"):
         response.headers["Cache-Control"] = "no-store"
     return response
 
@@ -70,6 +75,26 @@ def api_network():
 @app.get("/api/printer")
 def api_printer():
     return jsonify(printer_status())
+
+
+@app.route("/api/printer/margins", methods=["GET", "PUT"])
+def api_printer_margins():
+    if request.method == "GET":
+        try:
+            return jsonify({"ok": True, "margins": get_printer_margins()})
+        except RuntimeError as exc:
+            return jsonify({"ok": False, "error": str(exc)}), 400
+
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return jsonify({"ok": False, "error": "A JSON object is required."}), 400
+
+    values = data.get("margins", data)
+    try:
+        margins = save_printer_margins(values)
+    except RuntimeError as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 400
+    return jsonify({"ok": True, "margins": margins})
 
 
 @app.get("/api/status")
@@ -149,7 +174,7 @@ def preview_card_image(card_id):
         path,
         mimetype="image/jpeg",
         conditional=True,
-        max_age=31536000,
+        max_age=0,
     )
 
 
@@ -163,7 +188,7 @@ def preview_card_back_image(card_id):
         path,
         mimetype="image/jpeg",
         conditional=True,
-        max_age=31536000,
+        max_age=0,
     )
 
 

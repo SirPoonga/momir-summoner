@@ -13,9 +13,11 @@ from pathlib import Path
 from urllib.parse import quote
 from PIL import Image, ImageDraw, ImageFont
 from momir_config import (
+    get_config_path,
     get_local_base_url,
     get_printer_address,
     get_printer_channel,
+    get_printer_margins,
 )
 
 try:
@@ -31,12 +33,8 @@ PREVIEWS_DIR.mkdir(exist_ok=True)
 SYMBOL_DIR = ROOT / "mana_symbols"
 _RENDER_LOCK = threading.Lock()
 
-# Printer canvas. These values came from print calibration.
+# Printer canvas. Per-printer margins come from config.local.json.
 W, H = 450, 730
-SAFE_LEFT = 25       # slightly less side margin
-SAFE_TOP = 45        # keep extra top margin to avoid clipping
-SAFE_RIGHT = 25      # slightly less side margin
-SAFE_BOTTOM = 40     # increased bottom margin to avoid clipping
 
 FONT_BOLD = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
 FONT_REG = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
@@ -250,15 +248,31 @@ def fit_name_lines(draw, name: str, max_width: int):
             best = [a, b]
     return best or textwrap.wrap(name, width=22)[:2]
 
-def _render_printer_image(card, face_label=None):
+def _validated_render_margins() -> dict[str, int]:
+    margins = get_printer_margins()
+    usable_w = W - margins["left"] - margins["right"]
+    usable_h = H - margins["top"] - margins["bottom"]
+    if usable_w < 180:
+        raise RuntimeError(
+            "Configured printer left and right margins leave less than 180 pixels."
+        )
+    if usable_h < 260:
+        raise RuntimeError(
+            "Configured printer top and bottom margins leave less than 260 pixels."
+        )
+    return margins
+
+
+def _render_printer_image(card, face_label=None, margins=None):
+    margins = dict(margins or _validated_render_margins())
     img = Image.new("RGB", (W, H), "white")
     d = ImageDraw.Draw(img)
 
-    x = SAFE_LEFT
-    y = SAFE_TOP
-    right = W - SAFE_RIGHT
+    x = margins["left"]
+    y = margins["top"]
+    right = W - margins["right"]
     usable_w = right - x
-    bottom = H - SAFE_BOTTOM
+    bottom = H - margins["bottom"]
 
     name_f = font(FONT_BOLD, 31)
     type_f = font(FONT_BOLD, 18)
@@ -359,13 +373,37 @@ def _render_printer_image(card, face_label=None):
     return img
 
 
-def _cache_is_current(path: Path) -> bool:
-    if not path.exists():
+def _cache_metadata_path(path: Path) -> Path:
+    return path.with_name(path.name + ".meta.json")
+
+
+def _render_cache_signature(margins: dict[str, int]) -> dict:
+    return {
+        "version": 1,
+        "renderer_mtime_ns": Path(__file__).stat().st_mtime_ns,
+        "margins": dict(margins),
+    }
+
+
+def _cache_is_current(path: Path, margins: dict[str, int]) -> bool:
+    metadata_path = _cache_metadata_path(path)
+    if not path.exists() or not metadata_path.exists():
         return False
     try:
-        return path.stat().st_mtime >= Path(__file__).stat().st_mtime
-    except OSError:
+        metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+        return metadata == _render_cache_signature(margins)
+    except (OSError, json.JSONDecodeError, TypeError, ValueError):
         return False
+
+
+def _write_cache_metadata(path: Path, margins: dict[str, int]) -> None:
+    metadata_path = _cache_metadata_path(path)
+    temp = metadata_path.with_name(metadata_path.name + ".tmp")
+    temp.write_text(
+        json.dumps(_render_cache_signature(margins), sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    temp.replace(metadata_path)
 
 
 def render_printer(card, force: bool = False, face=None, is_back: bool = False):
@@ -385,16 +423,19 @@ def render_printer(card, force: bool = False, face=None, is_back: bool = False):
     identity = sanitize_filename(str(identity))
     prefix = "printer_back" if is_back else "printer"
     out = PRINTS_DIR / f"{prefix}_{sanitize_filename(name)}_{identity}.jpg"
+    margins = _validated_render_margins()
 
     with _RENDER_LOCK:
-        if force or not _cache_is_current(out):
+        if force or not _cache_is_current(out, margins):
             img = _render_printer_image(
                 rendered_card,
                 face_label="BACK" if is_back else None,
+                margins=margins,
             )
             temp = out.with_suffix(".tmp.jpg")
             img.save(temp, quality=100)
             temp.replace(out)
+            _write_cache_metadata(out, margins)
 
         last_name = "printer_back_last.jpg" if is_back else "printer_last.jpg"
         shutil.copyfile(out, PRINTS_DIR / last_name)
@@ -408,15 +449,17 @@ def render_printer_preview(card, width: int = 300, force: bool = False):
     height = round(H * width / W)
     card_id = sanitize_filename(str(card.get("id") or card.get("name") or "unknown"))
     out = PREVIEWS_DIR / f"preview_{card_id}_{width}.jpg"
+    margins = _validated_render_margins()
 
     with _RENDER_LOCK:
-        if force or not _cache_is_current(out):
-            img = _render_printer_image(card)
+        if force or not _cache_is_current(out, margins):
+            img = _render_printer_image(card, margins=margins)
             img = img.resize((width, height), Image.Resampling.LANCZOS)
             temp = out.with_suffix(".tmp.jpg")
             # Quality 84 is visually clean on a phone and substantially smaller.
             img.save(temp, quality=84, subsampling=1)
             temp.replace(out)
+            _write_cache_metadata(out, margins)
 
     return out
 
@@ -428,13 +471,15 @@ def render_printer_back_face(card, force: bool = False):
         return None
     name = face.get("name", "Back")
     out = PRINTS_DIR / f"printer_back_{sanitize_filename(name)}_{card.get('id')}.jpg"
+    margins = _validated_render_margins()
 
     with _RENDER_LOCK:
-        if force or not _cache_is_current(out):
-            img = _render_printer_image(face, face_label="BACK")
+        if force or not _cache_is_current(out, margins):
+            img = _render_printer_image(face, face_label="BACK", margins=margins)
             temp = out.with_suffix(".tmp.jpg")
             img.save(temp, quality=100)
             temp.replace(out)
+            _write_cache_metadata(out, margins)
     return out
 
 
@@ -447,14 +492,16 @@ def render_printer_back_preview(card, width: int = 300, force: bool = False):
     height = round(H * width / W)
     card_id = sanitize_filename(str(card.get("id") or card.get("name") or "unknown"))
     out = PREVIEWS_DIR / f"preview_back_{card_id}_{width}.jpg"
+    margins = _validated_render_margins()
 
     with _RENDER_LOCK:
-        if force or not _cache_is_current(out):
-            img = _render_printer_image(face, face_label="BACK")
+        if force or not _cache_is_current(out, margins):
+            img = _render_printer_image(face, face_label="BACK", margins=margins)
             img = img.resize((width, height), Image.Resampling.LANCZOS)
             temp = out.with_suffix(".tmp.jpg")
             img.save(temp, quality=84, subsampling=1)
             temp.replace(out)
+            _write_cache_metadata(out, margins)
     return out
 
 
@@ -522,7 +569,11 @@ def render_printer_back():
         tw = bbox[2] - bbox[0]
         draw.text(((W - tw) // 2, y), text, fill="black", font=font)
 
-    left, top, right, bottom = 34, 44, W - 34, H - 24
+    margins = _validated_render_margins()
+    left = margins["left"]
+    top = margins["top"]
+    right = W - margins["right"]
+    bottom = H - margins["bottom"]
     draw.rectangle((left, top, right, bottom), outline="black", width=4)
 
     center("MOMIR", 130, title)

@@ -10,10 +10,29 @@ ROOT = Path(__file__).resolve().parent
 DEFAULT_CONFIG_PATH = ROOT / "config.local.json"
 _ADDRESS_RE = re.compile(r"(?i)^(?:[0-9a-f]{2}:){5}[0-9a-f]{2}$")
 
+DEFAULT_PRINTER_MARGINS = {
+    "left": 25,
+    "top": 45,
+    "right": 25,
+    "bottom": 40,
+}
+
+_PRINTER_MARGIN_ENV_VARS = {
+    "left": "MOMIR_PRINTER_MARGIN_LEFT",
+    "top": "MOMIR_PRINTER_MARGIN_TOP",
+    "right": "MOMIR_PRINTER_MARGIN_RIGHT",
+    "bottom": "MOMIR_PRINTER_MARGIN_BOTTOM",
+}
+
 
 def _config_path() -> Path:
     configured = os.environ.get("MOMIR_CONFIG_PATH", "").strip()
     return Path(configured).expanduser() if configured else DEFAULT_CONFIG_PATH
+
+
+def get_config_path() -> Path:
+    """Return the active local configuration path."""
+    return _config_path()
 
 
 def load_local_config() -> dict[str, Any]:
@@ -58,6 +77,84 @@ def get_printer_channel() -> str:
     if not value.isdigit() or not 1 <= int(value) <= 30:
         raise RuntimeError("Configured printer Bluetooth channel is invalid.")
     return value
+
+
+
+
+def _coerce_printer_margin(name: str, raw: Any) -> int:
+    if isinstance(raw, bool):
+        raise RuntimeError(f"Printer margin {name} must be an integer.")
+    if isinstance(raw, int):
+        value = raw
+    elif isinstance(raw, str) and re.fullmatch(r"[+-]?\d+", raw.strip()):
+        value = int(raw.strip())
+    else:
+        raise RuntimeError(f"Printer margin {name} must be an integer.")
+    if not 0 <= value <= 250:
+        raise RuntimeError(
+            f"Printer margin {name} must be between 0 and 250 pixels."
+        )
+    return value
+
+
+def _validate_printer_margins(margins: dict[str, int]) -> dict[str, int]:
+    if margins["left"] + margins["right"] > 270:
+        raise RuntimeError(
+            "Left and right margins must leave at least 180 pixels of print width."
+        )
+    if margins["top"] + margins["bottom"] > 470:
+        raise RuntimeError(
+            "Top and bottom margins must leave at least 260 pixels of print height."
+        )
+    return margins
+
+
+def get_printer_margins() -> dict[str, int]:
+    """Return margins for the currently configured printer."""
+    printer = load_local_config().get("printer", {})
+    if not isinstance(printer, dict):
+        printer = {}
+    configured = printer.get("margins", {})
+    if configured in (None, ""):
+        configured = {}
+    if not isinstance(configured, dict):
+        raise RuntimeError("Printer margins must be a JSON object.")
+
+    margins: dict[str, int] = {}
+    for name, default in DEFAULT_PRINTER_MARGINS.items():
+        raw: Any = os.environ.get(_PRINTER_MARGIN_ENV_VARS[name], "").strip()
+        if raw == "":
+            raw = configured.get(name, default)
+        margins[name] = _coerce_printer_margin(name, raw)
+    return _validate_printer_margins(margins)
+
+
+def save_printer_margins(values: dict[str, Any]) -> dict[str, int]:
+    """Validate and persist margins for the currently configured printer."""
+    if not isinstance(values, dict):
+        raise RuntimeError("Printer margins must be a JSON object.")
+
+    margins = {
+        name: _coerce_printer_margin(name, values.get(name))
+        for name in DEFAULT_PRINTER_MARGINS
+    }
+    _validate_printer_margins(margins)
+
+    config = load_local_config()
+    printer = config.get("printer")
+    if not isinstance(printer, dict):
+        printer = {}
+        config["printer"] = printer
+    printer["margins"] = margins
+
+    path = get_config_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(f".{path.name}.tmp")
+    temporary.write_text(json.dumps(config, indent=2) + "\n", encoding="utf-8")
+    temporary.chmod(0o600)
+    temporary.replace(path)
+    path.chmod(0o600)
+    return margins
 
 
 def _config_section(name: str) -> dict[str, Any]:

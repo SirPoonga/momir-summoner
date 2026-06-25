@@ -1,27 +1,21 @@
 "use strict";
 
 const byId = (id) => document.getElementById(id);
-
+const DEFAULT_MARGINS = {left: 25, top: 45, right: 25, bottom: 40};
 let cardUpdatePollTimer = null;
 let cardUpdateWasRunning = false;
 
 async function requestJson(url, options = {}) {
-  const response = await fetch(url, {
-    cache: "no-store",
-    ...options,
-  });
-
+  const response = await fetch(url, {cache: "no-store", ...options});
   let data = {};
   try {
     data = await response.json();
   } catch (error) {
     throw new Error(`Invalid response from ${url}`);
   }
-
   if (!response.ok || data.ok === false) {
     throw new Error(data.error || `Request failed (${response.status})`);
   }
-
   return data;
 }
 
@@ -42,14 +36,12 @@ function renderPrinter(printer = {}) {
   const details = byId("settingsPrinterDetails");
   const message = printer.message || "Printer status unknown";
   const isUnknown = /unknown/i.test(message);
-
   status.textContent = message;
   status.className = printer.connected
     ? "printer connected"
     : isUnknown
       ? "printer unknown"
       : "printer disconnected";
-
   if (printer.details) {
     details.textContent = printer.details;
     details.classList.remove("hidden");
@@ -63,7 +55,6 @@ function renderNetwork(network = {}) {
   byId("networkWifi").textContent = displayValue(network.wifi);
   byId("networkIp").textContent = displayValue(network.ip);
   byId("networkTailscale").textContent = displayValue(network.tailscale);
-
   const localUrl = window.location.origin;
   const localLink = byId("networkLocalUrl");
   localLink.textContent = localUrl;
@@ -100,6 +91,69 @@ async function refreshDashboard() {
   }
 }
 
+function fillMarginFields(margins) {
+  byId("marginLeft").value = margins.left;
+  byId("marginTop").value = margins.top;
+  byId("marginRight").value = margins.right;
+  byId("marginBottom").value = margins.bottom;
+}
+
+function marginValues() {
+  return {
+    left: Number(byId("marginLeft").value),
+    top: Number(byId("marginTop").value),
+    right: Number(byId("marginRight").value),
+    bottom: Number(byId("marginBottom").value),
+  };
+}
+
+function showMarginMessage(message = "", kind = "") {
+  const element = byId("printerMarginStatus");
+  element.textContent = message;
+  element.className = `settings-note margin-message ${kind}`.trim();
+}
+
+async function loadPrinterMargins() {
+  try {
+    const data = await requestJson("/api/printer/margins");
+    fillMarginFields(data.margins);
+    showMarginMessage();
+  } catch (error) {
+    showMarginMessage(error.message || "Could not load printer margins.", "error");
+  }
+}
+
+async function savePrinterMargins(event = null, values = null) {
+  event?.preventDefault();
+  const saveButton = byId("savePrinterMarginsBtn");
+  const defaultButton = byId("defaultPrinterMarginsBtn");
+  saveButton.disabled = true;
+  defaultButton.disabled = true;
+  showMarginMessage("Saving margins...");
+  try {
+    const data = await requestJson("/api/printer/margins", {
+      method: "PUT",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({margins: values || marginValues()}),
+    });
+    fillMarginFields(data.margins);
+    showMarginMessage(
+      "Margins saved. New previews and prints will use these values.",
+      "success",
+    );
+  } catch (error) {
+    showMarginMessage(error.message || "Could not save printer margins.", "error");
+  } finally {
+    saveButton.disabled = false;
+    defaultButton.disabled = false;
+  }
+}
+
+function restoreDefaultMargins() {
+  fillMarginFields(DEFAULT_MARGINS);
+  savePrinterMargins(null, DEFAULT_MARGINS);
+}
+
 function formatCardUpdateMessage(data = {}) {
   if (data.state === "complete" && data.summary) {
     return (
@@ -108,11 +162,9 @@ function formatCardUpdateMessage(data = {}) {
       `${data.summary.with_back ?? 0} with stored back faces.`
     );
   }
-
   if (data.state === "error") {
     return `Update failed: ${data.error || "Unknown error"}`;
   }
-
   return data.message || "Ready to update when a new set is available.";
 }
 
@@ -122,7 +174,6 @@ function renderCardUpdateStatus(data = {}) {
   const status = byId("cardUpdateStatus");
   const progress = byId("cardUpdateProgress");
   const progressBar = byId("cardUpdateProgressBar");
-
   button.disabled = running;
   if (running && data.page && data.total_pages) {
     button.textContent = `Updating ${data.page} / ${data.total_pages}`;
@@ -131,7 +182,6 @@ function renderCardUpdateStatus(data = {}) {
   } else {
     button.textContent = "Update Cards";
   }
-
   const percent = Number(data.progress_percent);
   if (running && Number.isFinite(percent)) {
     const boundedPercent = Math.max(0, Math.min(100, percent));
@@ -143,10 +193,8 @@ function renderCardUpdateStatus(data = {}) {
     progressBar.style.width = "0%";
     progress.setAttribute("aria-valuenow", "0");
   }
-
   status.textContent = formatCardUpdateMessage(data);
   status.className = data.state === "error" ? "update-status error" : "update-status";
-
   if (running) {
     cardUpdateWasRunning = true;
   } else if (cardUpdateWasRunning) {
@@ -164,9 +212,7 @@ async function refreshCardUpdateStatus() {
   try {
     const data = await requestJson("/api/cards/update");
     renderCardUpdateStatus(data);
-    if (data.running) {
-      scheduleCardUpdatePoll();
-    }
+    if (data.running) scheduleCardUpdatePoll();
   } catch (error) {
     byId("updateCardsBtn").disabled = false;
     byId("cardUpdateStatus").textContent = "Could not read update status.";
@@ -176,51 +222,45 @@ async function refreshCardUpdateStatus() {
 
 async function startCardUpdate() {
   const approved = window.confirm(
-    "Download the latest card list from Scryfall? Printed-card tracking will be kept."
+    "Download the latest card list from Scryfall? Printed-card tracking will be kept.",
   );
   if (!approved) return;
-
   renderCardUpdateStatus({
     running: true,
     state: "starting",
     message: "Preparing card database update...",
   });
-
   try {
     const data = await requestJson("/api/cards/update", {method: "POST"});
     renderCardUpdateStatus(data);
     scheduleCardUpdatePoll(750);
   } catch (error) {
-    renderCardUpdateStatus({
-      running: false,
-      state: "error",
-      error: error.message,
-    });
+    renderCardUpdateStatus({running: false, state: "error", error: error.message});
   }
 }
 
 async function refreshAll() {
   const button = byId("refreshSettingsBtn");
   button.disabled = true;
-  await Promise.allSettled([refreshDashboard(), refreshCardUpdateStatus()]);
+  await Promise.allSettled([
+    refreshDashboard(),
+    refreshCardUpdateStatus(),
+    loadPrinterMargins(),
+  ]);
   button.disabled = false;
 }
 
 function initSettings() {
   byId("refreshSettingsBtn").addEventListener("click", refreshAll);
   byId("updateCardsBtn").addEventListener("click", startCardUpdate);
-
+  byId("printerMarginForm").addEventListener("submit", savePrinterMargins);
+  byId("defaultPrinterMarginsBtn").addEventListener("click", restoreDefaultMargins);
   refreshAll();
   setInterval(() => {
-    if (document.visibilityState === "visible") {
-      refreshDashboard();
-    }
+    if (document.visibilityState === "visible") refreshDashboard();
   }, 30000);
-
   document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible") {
-      refreshAll();
-    }
+    if (document.visibilityState === "visible") refreshAll();
   });
 }
 

@@ -462,3 +462,156 @@ input {
     font-size: clamp(24px, 7vw, 30px);
   }
 }
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 8px 0 18px;
+}
+
+.page-header h1 {
+  margin: 0;
+}
+
+.settings-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: #2d2d2d;
+  border: 1px solid #444;
+  color: #f5f5f5;
+  font-size: 28px;
+  line-height: 1;
+  text-decoration: none;
+}
+
+.settings-link:focus-visible,
+.settings-link:hover {
+  background: #3a3a3a;
+}
+
+.margin-help {
+  margin-top: 0;
+  color: #c7c7c7;
+  line-height: 1.45;
+}
+
+.margin-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.margin-field {
+  display: grid;
+  gap: 6px;
+  font-weight: 650;
+}
+
+.margin-field input {
+  width: 100%;
+  min-height: 48px;
+  padding: 10px 12px;
+  border: 1px solid #555;
+  border-radius: 10px;
+  background: #151515;
+  color: #fff;
+  font: inherit;
+  font-size: 18px;
+}
+
+.margin-status {
+  min-height: 1.5em;
+  margin-top: 12px;
+  color: #c7c7c7;
+}
+
+.margin-status.success {
+  color: #8ee59b;
+}
+
+.margin-status.error {
+  color: #ff9b9b;
+}
+
+@media (max-width: 460px) {
+  .margin-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+.printer-margin-settings {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid #444;
+}
+
+.printer-margin-settings h3 {
+  margin: 0 0 8px;
+  font-size: 20px;
+}
+
+.margin-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 14px 0;
+}
+
+.margin-field {
+  display: grid;
+  gap: 6px;
+  font-weight: 700;
+}
+
+.margin-field input {
+  width: 100%;
+  min-height: 48px;
+  padding: 10px 12px;
+  border: 1px solid #555;
+  border-radius: 10px;
+  background: #151515;
+  color: #fff;
+  font: inherit;
+  font-size: 18px;
+}
+
+.margin-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.secondary-button {
+  background: #444;
+  color: #fff;
+  border: 1px solid #666;
+}
+
+.margin-message {
+  min-height: 1.4em;
+  margin-top: 10px;
+}
+
+.margin-message.success {
+  color: #8ee59b;
+}
+
+.margin-message.error {
+  color: #ff9b9b;
+}
+
+@media (max-width: 460px) {
+  .margin-grid,
+  .margin-actions {
+    grid-template-columns: 1fr;
+  }
+}

@@ -29,6 +29,7 @@ The Raspberry Pi performs the application, database, rendering, and printing wor
 - Printed-card history preserved when the card database is updated
 - No downloaded or cached official card artwork
 - Local configuration for printer and web settings
+- Per-printer left, top, right, and bottom margin calibration
 - Automated tests and GitHub Actions validation
 
 ## Hardware
@@ -141,7 +142,13 @@ Edit that file and enter the printer's Bluetooth address:
 {
   "printer": {
     "bluetooth_address": "AA:BB:CC:DD:EE:FF",
-    "channel": "4"
+    "channel": "4",
+    "margins": {
+      "left": 25,
+      "top": 45,
+      "right": 25,
+      "bottom": 40
+    }
   },
   "web": {
     "host": "0.0.0.0",
@@ -150,6 +157,21 @@ Edit that file and enter the printer's Bluetooth address:
   }
 }
 ```
+
+
+Printer margins are measured in pixels on the 450 x 730 printer canvas and are
+stored inside the printer configuration because calibration can vary by printer.
+The defaults preserve the original calibrated layout: left `25`, top `45`,
+right `25`, and bottom `40`. Changing a margin automatically invalidates cached
+previews and printer images so the next request uses the new calibration.
+
+Margins can also be adjusted from the web interface at `http://momir.local:5000/settings`; saved values are written to the active printer entry in `config.local.json`.
+
+
+Printer margins can be adjusted on the **Settings** page. The Left, Top,
+Right, and Bottom values are stored under `printer.margins` in
+`config.local.json` and apply to the currently configured printer. The default
+calibration is 25, 45, 25, and 40 pixels respectively.
 
 ### Find the Bluetooth address
 
@@ -190,6 +212,10 @@ Environment variables override values in `config.local.json`:
 MOMIR_CONFIG_PATH
 MOMIR_PRINTER_ADDRESS
 MOMIR_PRINTER_CHANNEL
+MOMIR_PRINTER_MARGIN_LEFT
+MOMIR_PRINTER_MARGIN_TOP
+MOMIR_PRINTER_MARGIN_RIGHT
+MOMIR_PRINTER_MARGIN_BOTTOM
 MOMIR_HOST
 MOMIR_PORT
 MOMIR_LOCAL_BASE_URL

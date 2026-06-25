@@ -1,7 +1,13 @@
 {
   "printer": {
     "bluetooth_address": "",
-    "channel": "4"
+    "channel": "4",
+    "margins": {
+      "left": 25,
+      "top": 45,
+      "right": 25,
+      "bottom": 40
+    }
   },
   "web": {
     "host": "0.0.0.0",
