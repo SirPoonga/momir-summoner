@@ -1,0 +1,53 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>{{ card.name }} — Momir</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#111111">
+  <link rel="stylesheet" href="/static/style.css?v=16">
+  <style>
+    .face-label { color: #aaa; font-size: 0.82rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+    .rules { white-space: pre-wrap; line-height: 1.45; }
+    .stats { font-size: 1.35rem; font-weight: 800; margin-top: 12px; }
+    .home-link { display: block; text-align: center; text-decoration: none; background: #eee; color: #111; padding: 14px; border-radius: 12px; font-size: 19px; font-weight: 750; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Momir Card</h1>
+
+    <section class="panel">
+      <div class="face-label">Front</div>
+      <h2>{{ card.name }}</h2>
+      <div>{{ card.type_line or '' }}</div>
+      {% if card.mana_cost %}<div class="stats">{{ card.mana_cost }}</div>{% endif %}
+      <p class="rules">{{ card.oracle_text or '' }}</p>
+      {% if card.power is not none or card.toughness is not none %}
+        <div class="stats">{{ card.power or '?' }}/{{ card.toughness or '?' }}</div>
+      {% elif card.loyalty is not none %}
+        <div class="stats">Loyalty {{ card.loyalty }}</div>
+      {% endif %}
+    </section>
+
+    {% if card.back %}
+    <section class="panel">
+      <div class="face-label">Back</div>
+      <h2>{{ card.back.name }}</h2>
+      <div>{{ card.back.type_line or '' }}</div>
+      {% if card.back.mana_cost %}<div class="stats">{{ card.back.mana_cost }}</div>{% endif %}
+      <p class="rules">{{ card.back.oracle_text or '' }}</p>
+      {% if card.back.power is not none or card.back.toughness is not none %}
+        <div class="stats">{{ card.back.power or '?' }}/{{ card.back.toughness or '?' }}</div>
+      {% elif card.back.loyalty is not none %}
+        <div class="stats">Loyalty {{ card.back.loyalty }}</div>
+      {% elif card.back.defense is not none %}
+        <div class="stats">Defense {{ card.back.defense }}</div>
+      {% endif %}
+    </section>
+    {% endif %}
+
+    <a class="home-link" href="/">Open Momir</a>
+  </main>
+</body>
+</html>

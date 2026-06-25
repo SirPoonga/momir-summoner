@@ -1,0 +1,5 @@
+Flask>=3.0
+Pillow>=10.0
+qrcode>=8.0
+RapidFuzz>=3.0
+requests>=2.31.0

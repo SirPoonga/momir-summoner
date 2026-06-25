@@ -1,0 +1,86 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Momir Summoner</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#111111">
+  <link rel="stylesheet" href="/static/style.css?v=17">
+</head>
+<body>
+  <main>
+    <h1>Momir Summoner</h1>
+    <div id="printerStatus" class="printer unknown">Printer status...</div>
+
+    <section class="panel">
+      <h2>Choose Mana Value</h2>
+      <div id="manaButtons" class="buttons mana-buttons"></div>
+    </section>
+
+    <section class="panel card-panel" aria-live="polite">
+      <h2 class="card-title">
+        <span id="cardName">No card summoned</span>
+        <span
+          id="cardPrintedIcon"
+          class="printed-icon hidden"
+          role="img"
+          aria-label="Already printed"
+          title="Already printed"
+        >🖨</span>
+      </h2>
+      <div id="cardMeta"></div>
+      <p id="cardText"></p>
+
+      <div id="previewShell" class="preview-shell hidden">
+        <div id="previewLoading" class="preview-loading">Rendering preview...</div>
+        <img id="preview" class="preview hidden" alt="Rendered card preview" decoding="async">
+      </div>
+
+      <div class="buttons action-buttons">
+        <button id="printBtn" disabled>Summon</button>
+        <button id="reprintBtn" disabled>Resummon Last</button>
+        <button id="viewBackBtn" disabled>View Back</button>
+        <button id="backBtn" disabled>Print Back</button>
+        <button id="markPrintedBtn" class="mark-printed-button" disabled>Mark as Printed</button>
+      </div>
+    </section>
+
+
+    <section class="panel">
+      <h2>Search</h2>
+      <input id="searchBox" placeholder="Search creature name" autocomplete="off" autocapitalize="none" spellcheck="false">
+      <div id="searchResults"></div>
+    </section>
+
+
+
+    <section class="panel update-panel">
+      <h2>Card Database</h2>
+      <button id="updateCardsBtn" class="update-button" type="button">Update Cards</button>
+      <div
+        id="cardUpdateProgress"
+        class="update-progress hidden"
+        role="progressbar"
+        aria-label="Card database update progress"
+        aria-valuemin="0"
+        aria-valuemax="100"
+        aria-valuenow="0"
+      >
+        <div id="cardUpdateProgressBar" class="update-progress-bar"></div>
+      </div>
+      <div id="cardUpdateStatus" class="update-status" aria-live="polite">
+        Ready to update when a new set is available.
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Status</h2>
+      <div id="status">Loading...</div>
+    </section>
+
+    <footer id="networkFooter" class="networkFooter">Network status...</footer>
+  </main>
+
+  <script src="/static/app.js?v=18"></script>
+</body>
+</html>

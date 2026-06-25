@@ -1,0 +1,11 @@
+{
+  "printer": {
+    "bluetooth_address": "",
+    "channel": "4"
+  },
+  "web": {
+    "host": "0.0.0.0",
+    "port": 5000,
+    "local_base_url": "http://momir.local:5000"
+  }
+}

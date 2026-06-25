@@ -1,0 +1,53 @@
+# Local machine configuration and environment files
+config.local.json
+.env
+.env.*
+!.env.example
+
+# Runtime database and SQLite sidecar files
+momir.db
+momir.db-*
+*.sqlite
+*.sqlite3
+
+# Runtime output
+prints/
+images/
+backups/
+logs/
+
+# Downloaded card data
+data/*.json
+data/*.json.gz
+
+# Python environments and caches
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Build and package output
+build/
+dist/
+*.egg-info/
+*.tar.gz
+*.zip
+
+# Temporary and backup files
+*.bak
+*.bak_*
+*.backup
+*_backup_*
+*~
+*.swp
+
+# Editors and operating systems
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
