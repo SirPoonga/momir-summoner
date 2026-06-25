@@ -5,12 +5,28 @@
   <title>Momir Summoner</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#111111">
-  <link rel="stylesheet" href="/static/style.css?v=17">
+  <link rel="stylesheet" href="/static/style.css?v=22">
 </head>
 <body>
   <main>
-    <h1>Momir Summoner</h1>
-    <div id="printerStatus" class="printer unknown">Printer status...</div>
+    <header class="page-header home-header">
+      <a
+        id="printerStatus"
+        class="printer unknown"
+        href="/settings"
+        aria-label="Open printer status in settings"
+        title="Printer status"
+      >Printer status...</a>
+
+      <h1>Momir Summoner</h1>
+
+      <a
+        class="icon-button settings-link"
+        href="/settings"
+        aria-label="Open settings"
+        title="Settings"
+      >&#9881;</a>
+    </header>
 
     <section class="panel">
       <h2>Choose Mana Value</h2>
@@ -26,14 +42,19 @@
           role="img"
           aria-label="Already printed"
           title="Already printed"
-        >🖨</span>
+        ></span>
       </h2>
       <div id="cardMeta"></div>
       <p id="cardText"></p>
 
       <div id="previewShell" class="preview-shell hidden">
         <div id="previewLoading" class="preview-loading">Rendering preview...</div>
-        <img id="preview" class="preview hidden" alt="Rendered card preview" decoding="async">
+        <img
+          id="preview"
+          class="preview hidden"
+          alt="Rendered card preview"
+          decoding="async"
+        >
       </div>
 
       <div class="buttons action-buttons">
@@ -41,22 +62,29 @@
         <button id="reprintBtn" disabled>Resummon Last</button>
         <button id="viewBackBtn" disabled>View Back</button>
         <button id="backBtn" disabled>Print Back</button>
-        <button id="markPrintedBtn" class="mark-printed-button" disabled>Mark as Printed</button>
+        <button id="markPrintedBtn" class="mark-printed-button" disabled>
+          Mark as Printed
+        </button>
       </div>
     </section>
 
-
     <section class="panel">
       <h2>Search</h2>
-      <input id="searchBox" placeholder="Search creature name" autocomplete="off" autocapitalize="none" spellcheck="false">
+      <input
+        id="searchBox"
+        placeholder="Search creature name"
+        autocomplete="off"
+        autocapitalize="none"
+        spellcheck="false"
+      >
       <div id="searchResults"></div>
     </section>
 
+    <!-- app.js still updates these elements. Their visible interfaces now
+         live on /settings, so these compatibility hooks stay hidden. -->
+    <div class="hidden-settings-hooks" aria-hidden="true">
+      <button id="updateCardsBtn" type="button">Update Cards</button>
 
-
-    <section class="panel update-panel">
-      <h2>Card Database</h2>
-      <button id="updateCardsBtn" class="update-button" type="button">Update Cards</button>
       <div
         id="cardUpdateProgress"
         class="update-progress hidden"
@@ -68,17 +96,11 @@
       >
         <div id="cardUpdateProgressBar" class="update-progress-bar"></div>
       </div>
-      <div id="cardUpdateStatus" class="update-status" aria-live="polite">
-        Ready to update when a new set is available.
-      </div>
-    </section>
 
-    <section class="panel">
-      <h2>Status</h2>
+      <div id="cardUpdateStatus" class="update-status">Ready to update.</div>
       <div id="status">Loading...</div>
-    </section>
-
-    <footer id="networkFooter" class="networkFooter">Network status...</footer>
+      <footer id="networkFooter" class="networkFooter">Network status...</footer>
+    </div>
   </main>
 
   <script src="/static/app.js?v=18"></script>
