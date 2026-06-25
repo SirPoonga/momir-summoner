@@ -36,10 +36,18 @@ function setCardActionsEnabled(enabled) {
 }
 
 function renderPrintedStatus(card) {
-  const icon = $("cardPrintedIcon");
-  const printed = Boolean(card?.printed || Number(card?.printed_count) > 0);
-  icon.classList.toggle("hidden", !printed);
-  icon.setAttribute("aria-hidden", printed ? "false" : "true");
+  const indicator = $("cardPrintedIcon");
+  if (!indicator) return;
+
+  const printed = Boolean(
+    card?.printed || Number(card?.printed_count) > 0
+  );
+
+  indicator.classList.toggle("hidden", !printed);
+  indicator.hidden = !printed;
+  indicator.style.display = printed ? "inline-flex" : "none";
+  indicator.setAttribute("aria-hidden", printed ? "false" : "true");
+  indicator.dataset.printed = printed ? "true" : "false";
 }
 
 function setSelectedMana(mv) {
@@ -296,22 +304,32 @@ function selectSearchedCard(id) {
 
 
 function restoreSelectedCardFromDashboard(stats) {
-  if (lastCard || !stats?.last_card) return;
+  const serverCard = stats?.last_card;
+  if (!serverCard?.id) return;
 
-  const card = stats.last_card;
-  if (!card.id) return;
+  if (lastCard?.id === serverCard.id) {
+    lastCard = {...lastCard, ...serverCard};
+    renderPrintedStatus(lastCard);
+    setCardActionsEnabled(true);
+    return;
+  }
 
-  const cardId = encodeURIComponent(card.id);
+  if (lastCard) return;
+
+  const cardId = encodeURIComponent(serverCard.id);
   const cacheVersion = Date.now();
   const previewUrl = `/preview/card/${cardId}.jpg?v=${cacheVersion}`;
-  const backPreviewUrl = card.has_back
+  const backPreviewUrl = serverCard.has_back
     ? `/preview/card/${cardId}/back.jpg?v=${cacheVersion}`
     : null;
 
-  showCard(card, previewUrl, backPreviewUrl);
+  showCard(serverCard, previewUrl, backPreviewUrl);
 
-  if (card.mana_value !== null && card.mana_value !== undefined) {
-    setSelectedMana(card.mana_value);
+  if (
+    serverCard.mana_value !== null
+    && serverCard.mana_value !== undefined
+  ) {
+    setSelectedMana(serverCard.mana_value);
   }
 }
 

@@ -5,7 +5,7 @@
   <title>Momir Summoner</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#111111">
-  <link rel="stylesheet" href="/static/style.css?v=23">
+  <link rel="stylesheet" href="/static/style.css?v=24">
 </head>
 <body>
   <main>
@@ -43,9 +43,15 @@
           id="cardPrintedIcon"
           class="printed-icon hidden"
           role="img"
-          aria-label="Already printed"
+          aria-label="This card has already been printed"
           title="Already printed"
-        ></span>
+          style="display:none;align-items:center;justify-content:center;flex:0 0 auto;width:28px;height:28px;color:#b8b8b8;vertical-align:middle"
+        ><svg
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+          focusable="false"
+          style="display:block;width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2.25;stroke-linecap:round;stroke-linejoin:round"
+        ><path d="M7 8V3h10v5"></path><path d="M7 17H5a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><path d="M7 14h10v7H7z"></path><path d="M17 11h.01"></path></svg></span>
       </h2>
       <div id="cardMeta"></div>
       <p id="cardText"></p>
@@ -106,6 +112,6 @@
     </div>
   </main>
 
-  <script src="/static/app.js?v=21"></script>
+  <script src="/static/app.js?v=23"></script>
 </body>
 </html>

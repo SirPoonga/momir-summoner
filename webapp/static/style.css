@@ -34,18 +34,12 @@ h2 {
   align-items: center;
   gap: 0.45rem;
   min-width: 0;
+  flex-wrap: wrap;
 }
 
 .card-title #cardName {
   min-width: 0;
   overflow-wrap: anywhere;
-}
-
-.printed-icon {
-  flex: 0 0 auto;
-  font-size: 0.82em;
-  line-height: 1;
-  filter: grayscale(1);
 }
 
 .panel {
