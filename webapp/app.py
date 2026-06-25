@@ -44,6 +44,11 @@ def index():
     return render_template("index.html")
 
 
+@app.get("/settings")
+def settings_page():
+    return render_template("settings.html")
+
+
 @app.get("/card/<card_id>")
 def card_page(card_id):
     card = card_details(card_id)

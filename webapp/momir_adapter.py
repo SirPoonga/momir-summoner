@@ -1,7 +1,9 @@
 from pathlib import Path
 from datetime import datetime
 import json
+import os
 import re
+import signal
 import socket
 import sqlite3
 import subprocess
@@ -59,6 +61,7 @@ _UPDATE_STATE = {
 
 _STATUS_CACHE = {}
 _STATUS_CACHE_LOCK = threading.Lock()
+_PRINTER_PROBE_LOCK = threading.Lock()
 
 
 def back_face_from_card(card):
@@ -376,54 +379,132 @@ def _cached_value(key, ttl_seconds, loader):
     return value
 
 
+def _run_printer_probe(command, timeout_seconds):
+    # Run a Bluetooth probe and kill its entire process group on timeout.
+    process = subprocess.Popen(
+        command,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        start_new_session=True,
+    )
+
+    try:
+        stdout, stderr = process.communicate(timeout=timeout_seconds)
+    except subprocess.TimeoutExpired:
+        os.killpg(process.pid, signal.SIGKILL)
+        stdout, stderr = process.communicate()
+        return {
+            "returncode": 124,
+            "stdout": stdout or "",
+            "stderr": stderr or "",
+            "timed_out": True,
+        }
+
+    return {
+        "returncode": process.returncode,
+        "stdout": stdout or "",
+        "stderr": stderr or "",
+        "timed_out": False,
+    }
+
+
 def _load_printer_status():
     mac = get_printer_address(required=False)
+
     if not mac:
         return {
             "connected": False,
-            "message": "⚪ Printer Not Configured",
+            "message": "Printer Not Configured",
             "details": "Set printer.bluetooth_address in config.local.json.",
         }
-    try:
-        ping = subprocess.run(
-            ["sudo", "l2ping", "-c", "1", mac],
-            text=True,
-            capture_output=True,
-            timeout=3,
-        )
 
-        if ping.returncode == 0:
-            return {
-                "connected": True,
-                "message": "🟢 Printer On",
-                "details": ping.stdout.strip(),
-            }
+    with _PRINTER_PROBE_LOCK:
+        try:
+            ping = _run_printer_probe(
+                [
+                    "sudo",
+                    "-n",
+                    "/usr/bin/l2ping",
+                    "-c",
+                    "1",
+                    "-t",
+                    "5",
+                    mac,
+                ],
+                timeout_seconds=7,
+            )
 
-        info = subprocess.run(
-            ["bluetoothctl", "info", mac],
-            text=True,
-            capture_output=True,
-            timeout=3,
-        )
+            if ping["returncode"] == 0:
+                details = (
+                    ping["stdout"].strip()
+                    or "Bluetooth echo reply received."
+                )
+                return {
+                    "connected": True,
+                    "message": "Printer Ready",
+                    "details": details,
+                }
 
-        if info.returncode == 0 and "Paired: yes" in info.stdout:
+            info = subprocess.run(
+                ["bluetoothctl", "info", mac],
+                text=True,
+                capture_output=True,
+                timeout=4,
+            )
+
+            paired = (
+                info.returncode == 0
+                and "Paired: yes" in info.stdout
+            )
+
+            if paired:
+                if ping["timed_out"]:
+                    details = (
+                        "The paired printer did not answer the Bluetooth "
+                        "readiness probe within 7 seconds."
+                    )
+                else:
+                    details = (
+                        ping["stderr"].strip()
+                        or ping["stdout"].strip()
+                        or (
+                            "The paired printer did not answer "
+                            "the readiness probe."
+                        )
+                    )
+
+                return {
+                    "connected": False,
+                    "message": "Printer Off",
+                    "details": details,
+                }
+
+            details = (
+                info.stderr.strip()
+                or ping["stderr"].strip()
+                or "The configured Bluetooth device is not paired."
+            )
+
             return {
                 "connected": False,
-                "message": "🟡 Printer Off",
-                "details": info.stdout.strip(),
+                "message": "Printer Not Paired",
+                "details": details,
             }
 
-        return {
-            "connected": False,
-            "message": "🔴 Printer Not Paired",
-            "details": "",
-        }
-    except Exception as exc:
-        return {
-            "connected": False,
-            "message": "⚪ Printer Unknown",
-            "details": str(exc),
-        }
+        except FileNotFoundError as exc:
+            return {
+                "connected": False,
+                "message": "Printer Check Unavailable",
+                "details": str(exc),
+            }
+
+        except Exception as exc:
+            return {
+                "connected": False,
+                "message": "Printer Unknown",
+                "details": str(exc),
+            }
 
 
 def printer_status():

@@ -9,7 +9,9 @@ The Raspberry Pi performs the application, database, rendering, and printing wor
 
 ## Current Features
 
-- Mobile-friendly web interface
+- Mobile-friendly gameplay interface
+- Dedicated Settings page for printer status, network information, card-database statistics and updates, and system status
+- Compact printer-readiness icon in the gameplay header
 - Mana values 1 through 16
 - Random front-face creature selection by mana value
 - Local SQLite card database
@@ -18,7 +20,7 @@ The Raspberry Pi performs the application, database, rendering, and printing wor
 - Printing through a supported Bluetooth printer
 - Printed-card tracking
 - Manual **Mark as Printed** control
-- Printer icon for cards already marked as printed
+- Printed-card indicator beside cards already marked as printed
 - Front and back viewing for supported double-faced cards
 - Front and back printing for supported double-faced cards
 - Local card information and rules pages
@@ -215,6 +217,21 @@ hostname -I
 
 The first address shown is usually the local IPv4 address.
 
+The root address opens the gameplay page. Search, mana selection, summoning, card previews, printing controls, and printed-card controls remain on this page.
+
+Use the gear icon in the gameplay header to open **Settings**. Settings can also be opened directly at:
+
+```text
+http://momir.local:5000/settings
+```
+
+The printer icon on the left side of the gameplay title shows current readiness:
+
+- **Green:** the configured printer answered the readiness check
+- **Gray:** the printer is off, unavailable, not configured, or otherwise not ready
+
+Tap the printer icon to open Settings and view the detailed printer-status message. This header icon is separate from the printed-card indicator shown beside a card that has already been marked as printed.
+
 ## Connecting from a Phone or Other Device
 
 ### Option 1: Shared Wi-Fi Network
@@ -305,19 +322,21 @@ Until those tests are complete, use shared Wi-Fi, a phone hotspot, or Tailscale.
 
 ## Using Momir Summoner
 
-1. Open the web interface.
-2. Select the required mana value.
-3. Summon a creature.
-4. Review the generated card preview and information.
-5. Print the selected card when needed.
-6. Use **View Back** or **Print Back** when a supported card has a reverse face.
-7. Use **Mark as Printed** when a card was printed outside the normal print action.
-8. Use the printer icon and printed status to avoid unnecessary duplicate prints.
-9. Use search to locate a specific card in the local database.
+1. Open the gameplay page.
+2. Check the printer-readiness icon in the header before printing. Green means ready; gray means unavailable or not ready.
+3. Select the required mana value.
+4. Summon a creature.
+5. Review the generated card preview and information.
+6. Print the selected card when needed.
+7. Use **View Back** or **Print Back** when a supported card has a reverse face.
+8. Use **Mark as Printed** when a card was printed outside the normal print action.
+9. Use the printed-card indicator beside the card name to avoid unnecessary duplicate prints.
+10. Use Search on the gameplay page to locate a specific card in the local database.
+11. Use the gear icon to open Settings for detailed printer status, network information, card-database controls, and system status.
 
 ## Updating the Card Database
 
-Use **Update Cards** at the bottom of the web interface, or run:
+Open **Settings → Card Database** and select **Update Cards**, or run:
 
 ```bash
 ./scripts/update_momir_cards.sh
@@ -505,7 +524,9 @@ Confirm the application is listening on `0.0.0.0:5000`.
 
 ### The printer is not found
 
-Confirm the printer is powered on and charged.
+A gray printer icon on the gameplay page means the configured printer is not currently ready or reachable. Tap the icon or open Settings to view the detailed status message.
+
+Confirm the printer is powered on, charged, and awake.
 
 Check Bluetooth:
 

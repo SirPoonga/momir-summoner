@@ -1,0 +1,108 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Settings - Momir Summoner</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#111111">
+  <link rel="stylesheet" href="/static/style.css?v=22">
+</head>
+<body>
+  <main class="settings-page">
+    <header class="page-header">
+      <a class="icon-button back-link" href="/" aria-label="Back to Momir Summoner" title="Back">←</a>
+      <h1>Settings</h1>
+      <button
+        id="refreshSettingsBtn"
+        class="icon-button refresh-button"
+        type="button"
+        aria-label="Refresh status"
+        title="Refresh status"
+      >↻</button>
+    </header>
+
+    <section class="panel">
+      <h2>Printer</h2>
+      <div id="settingsPrinterStatus" class="printer unknown">Checking printer...</div>
+      <div id="settingsPrinterDetails" class="settings-note hidden"></div>
+    </section>
+
+    <section class="panel">
+      <h2>Network</h2>
+      <div class="settings-list">
+        <div class="settings-row">
+          <span class="settings-label">Wi-Fi</span>
+          <span id="networkWifi" class="settings-value">Loading...</span>
+        </div>
+        <div class="settings-row">
+          <span class="settings-label">Local address</span>
+          <a id="networkLocalUrl" class="settings-value settings-value-link" href="/">Loading...</a>
+        </div>
+        <div class="settings-row">
+          <span class="settings-label">IP address</span>
+          <span id="networkIp" class="settings-value">Loading...</span>
+        </div>
+        <div class="settings-row">
+          <span class="settings-label">Tailscale</span>
+          <span id="networkTailscale" class="settings-value">Loading...</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel update-panel">
+      <h2>Card Database</h2>
+      <div class="settings-list database-summary">
+        <div class="settings-row">
+          <span class="settings-label">Creature cards</span>
+          <span id="databaseCards" class="settings-value">Loading...</span>
+        </div>
+        <div class="settings-row">
+          <span class="settings-label">Stored back faces</span>
+          <span id="databaseBackFaces" class="settings-value">Loading...</span>
+        </div>
+        <div class="settings-row">
+          <span class="settings-label">Unique printed</span>
+          <span id="databasePrintedUnique" class="settings-value">Loading...</span>
+        </div>
+        <div class="settings-row">
+          <span class="settings-label">Total prints</span>
+          <span id="databasePrintsTotal" class="settings-value">Loading...</span>
+        </div>
+      </div>
+
+      <button id="updateCardsBtn" class="update-button" type="button">Update Cards</button>
+      <div
+        id="cardUpdateProgress"
+        class="update-progress hidden"
+        role="progressbar"
+        aria-label="Card database update progress"
+        aria-valuemin="0"
+        aria-valuemax="100"
+        aria-valuenow="0"
+      >
+        <div id="cardUpdateProgressBar" class="update-progress-bar"></div>
+      </div>
+      <div id="cardUpdateStatus" class="update-status" aria-live="polite">
+        Ready to update when a new set is available.
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>System Status</h2>
+      <div class="settings-list">
+        <div class="settings-row">
+          <span class="settings-label">Application</span>
+          <span id="applicationStatus" class="settings-value status-good">Running</span>
+        </div>
+        <div class="settings-row">
+          <span class="settings-label">Last selected card</span>
+          <span id="lastCardStatus" class="settings-value">Loading...</span>
+        </div>
+      </div>
+      <div id="settingsError" class="update-status error hidden" aria-live="polite"></div>
+    </section>
+  </main>
+
+  <script src="/static/settings.js?v=1"></script>
+</body>
+</html>

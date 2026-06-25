@@ -239,3 +239,226 @@ input {
   background: #e8e8e8;
   transition: width 180ms linear;
 }
+
+.page-header {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) 52px;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 18px;
+}
+
+.page-header h1 {
+  min-width: 0;
+  margin: 8px 0;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.icon-button {
+  width: 52px;
+  min-height: 52px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid #444;
+  border-radius: 12px;
+  background: #222;
+  color: #f5f5f5;
+  font-size: 28px;
+  line-height: 1;
+  text-decoration: none;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.icon-button:active {
+  transform: scale(0.98);
+}
+
+.icon-button:disabled {
+  opacity: 0.45;
+}
+
+.page-header-spacer {
+  width: 52px;
+  height: 52px;
+}
+
+.hidden-settings-hooks {
+  display: none !important;
+}
+
+.settings-page .panel {
+  contain: none;
+}
+
+.settings-list {
+  margin: 0 0 16px;
+  border-top: 1px solid #3a3a3a;
+}
+
+.settings-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr);
+  gap: 12px;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid #3a3a3a;
+}
+
+.settings-label {
+  color: #bdbdbd;
+}
+
+.settings-value {
+  min-width: 0;
+  font-weight: 700;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.settings-value-link {
+  color: #9bc7ff;
+}
+
+.settings-note {
+  margin-top: -6px;
+  color: #cfcfcf;
+  font-size: 14px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.status-good {
+  color: #72ef83;
+}
+
+.status-bad {
+  color: #ff9b9b;
+}
+
+.database-summary + .update-button {
+  margin-top: 4px;
+}
+
+@media (max-width: 420px) {
+  .page-header {
+    grid-template-columns: 48px minmax(0, 1fr) 48px;
+    gap: 8px;
+  }
+
+  .icon-button,
+  .page-header-spacer {
+    width: 48px;
+    min-height: 48px;
+    height: 48px;
+  }
+
+  .page-header h1 {
+    font-size: 28px;
+  }
+
+  .settings-row {
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+    gap: 10px;
+  }
+}
+
+.home-printer-status {
+  margin: 0 0 16px;
+}
+
+/* Compact gameplay header: printer status, centered title, settings. */
+.page-header.home-header {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 0 18px;
+}
+
+.page-header.home-header h1 {
+  min-width: 0;
+  margin: 0;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.icon-button,
+#printerStatus {
+  width: 44px;
+  height: 44px;
+  display: inline-grid;
+  place-items: center;
+  padding: 0;
+  margin: 0;
+  border: 1px solid #4a4a4a;
+  border-radius: 12px;
+  text-decoration: none;
+  line-height: 1;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.icon-button {
+  background: #2c2c2c;
+  color: #f5f5f5;
+  font-size: 25px;
+}
+
+.icon-button:active,
+#printerStatus:active {
+  transform: scale(0.96);
+}
+
+/*
+  app.js replaces printerStatus.className with either:
+    "printer connected"
+    "printer disconnected"
+  Therefore all compact sizing is attached to the ID, not an extra class.
+*/
+#printerStatus {
+  position: relative;
+  overflow: hidden;
+  font-size: 0;
+  font-weight: 400;
+  color: #8d8d8d;
+  background: #2c2c2c;
+}
+
+#printerStatus::before {
+  content: "";
+  width: 23px;
+  height: 23px;
+  background-color: currentColor;
+  -webkit-mask:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 9V3h12v6h1a3 3 0 0 1 3 3v5h-4v4H6v-4H2v-5a3 3 0 0 1 3-3h1Zm2-4v4h8V5H8Zm8 10H8v4h8v-4Zm3-4H5a1 1 0 0 0-1 1v3h2v-2h12v2h2v-3a1 1 0 0 0-1-1Zm-1.5 1a1 1 0 1 1 0 2 1 1 0 0 1 0-2Z'/%3E%3C/svg%3E")
+    center / contain no-repeat;
+  mask:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 9V3h12v6h1a3 3 0 0 1 3 3v5h-4v4H6v-4H2v-5a3 3 0 0 1 3-3h1Zm2-4v4h8V5H8Zm8 10H8v4h8v-4Zm3-4H5a1 1 0 0 0-1 1v3h2v-2h12v2h2v-3a1 1 0 0 0-1-1Zm-1.5 1a1 1 0 1 1 0 2 1 1 0 0 1 0-2Z'/%3E%3C/svg%3E")
+    center / contain no-repeat;
+}
+
+#printerStatus.connected {
+  color: #41dc69;
+  background: #17351f;
+  border-color: #2b8f43;
+}
+
+#printerStatus.disconnected,
+#printerStatus.unknown {
+  color: #8d8d8d;
+  background: #2c2c2c;
+  border-color: #4a4a4a;
+}
+
+.hidden-settings-hooks {
+  display: none !important;
+}
+
+@media (max-width: 420px) {
+  .page-header.home-header h1 {
+    font-size: clamp(24px, 7vw, 30px);
+  }
+}
