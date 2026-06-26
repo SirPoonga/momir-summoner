@@ -16,7 +16,11 @@ from rapidfuzz import fuzz
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from momir_config import get_printer_address
+from momir_config import (
+    get_printer_address,
+    get_printer_type,
+    get_thermal_printer_settings,
+)
 
 from db import (
     DB_PATH,
@@ -36,6 +40,8 @@ from render_printer import (
     render_printer_back_preview,
     print_printer,
 )
+
+from thermal_printer import print_thermal, render_thermal_preview
 
 LAST_CARD = None
 LAST_RENDERED = None
@@ -172,6 +178,22 @@ def preview_card(card_id, face="front"):
     return render_printer_preview(card)
 
 
+# MOMIR_THERMAL_PRINTER_PREVIEW_START
+def preview_current_thermal():
+    """Render the selected card using the 58 mm receipt layout."""
+
+    with _STATE_LOCK:
+        card = dict(LAST_CARD) if LAST_CARD else None
+    if not card:
+        return None
+    return render_thermal_preview(
+        card,
+        settings=get_thermal_printer_settings(),
+        force=True,
+    )
+
+
+# MOMIR_THERMAL_PRINTER_PREVIEW_END
 def card_details(card_id):
     conn = connect()
     try:
@@ -206,21 +228,41 @@ def print_last():
         if not card:
             return {"ok": False, "error": "No card has been summoned yet."}
 
-        # Generate the full 450x730 print image only when it is needed.
-        if not rendered or not Path(rendered).exists():
-            rendered = render_printer(card)
-            with _STATE_LOCK:
-                if LAST_CARD and LAST_CARD.get("id") == card.get("id"):
-                    LAST_RENDERED = rendered
+        printer_type = get_printer_type()
 
-        print_printer(rendered)
+        if printer_type == "thermal_58mm":
+            thermal_settings = get_thermal_printer_settings()
+            thermal_result = print_thermal(card, thermal_settings)
+            if not thermal_result.get("ok"):
+                return {
+                    "ok": False,
+                    "error": thermal_result.get("error")
+                    or "Thermal mock job could not be created.",
+                }
+            output = (
+                "Thermal mock job saved to "
+                f"{thermal_result.get('text_path')} and "
+                f"{thermal_result.get('preview_path')}."
+            )
+            # A mock file is not a physical print, so printed-card tracking
+            # must not be changed yet.
+            printed_card = card
+        else:
+            # Generate the full 450x730 photo image only when it is needed.
+            if not rendered or not Path(rendered).exists():
+                rendered = render_printer(card)
+                with _STATE_LOCK:
+                    if LAST_CARD and LAST_CARD.get("id") == card.get("id"):
+                        LAST_RENDERED = rendered
+            print_printer(rendered)
+            output = f"Printed photo output from {rendered}."
 
-        conn = connect()
-        try:
-            mark_printed(conn, card["id"])
-            printed_card = get_card(conn, card["id"]) or card
-        finally:
-            conn.close()
+            conn = connect()
+            try:
+                mark_printed(conn, card["id"])
+                printed_card = get_card(conn, card["id"]) or card
+            finally:
+                conn.close()
 
         # Keep the in-memory selected card synchronized so the UI receives the
         # printed state immediately and future status calls remain accurate.
@@ -228,7 +270,12 @@ def print_last():
             if LAST_CARD and LAST_CARD.get("id") == card.get("id"):
                 LAST_CARD = dict(printed_card)
 
-        return {"ok": True, "card": card_to_json(printed_card)}
+        return {
+        "ok": True,
+        "card": card_to_json(printed_card),
+        "output": output,
+        "printer_type": printer_type,
+    }
 
 
 def reprint_last():
@@ -338,6 +385,11 @@ def search(query):
 
 
 def print_back_current():
+    if get_printer_type() == "thermal_58mm":
+        return {
+            "ok": False,
+            "error": "Back-face printing currently requires photo-printer mode.",
+        }
     if card_update_status().get("running"):
         return {
             "ok": False,
@@ -409,7 +461,29 @@ def _run_printer_probe(command, timeout_seconds):
     }
 
 
+# MOMIR_THERMAL_PRINTER_STATUS_CACHE_START
+def clear_printer_status_cache():
+    with _STATUS_CACHE_LOCK:
+        _STATUS_CACHE.clear()
+
+
+# MOMIR_THERMAL_PRINTER_STATUS_CACHE_END
 def _load_printer_status():
+    if get_printer_type() == "thermal_58mm":
+        settings = get_thermal_printer_settings()
+        return {
+            "connected": True,
+            "message": "Thermal Mock Ready",
+            "details": (
+                "No physical printer is used yet. Jobs are saved under "
+                "prints/thermal-mock/ using "
+                f"{settings['columns']} columns, "
+                f"{settings['paper_width_pixels']} dots, and a "
+                f"{settings['qr_size_pixels']}-dot QR code."
+            ),
+            "printer_type": "thermal_58mm",
+            "transport": "mock",
+        }
     mac = get_printer_address(required=False)
 
     if not mac:

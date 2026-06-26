@@ -25,6 +25,23 @@ _PRINTER_MARGIN_ENV_VARS = {
 }
 
 
+# MOMIR_THERMAL_PRINTER_CONFIG_START
+PRINTER_TYPES = ("photo", "thermal_58mm")
+DEFAULT_THERMAL_PRINTER_SETTINGS = {
+    "columns": 32,
+    "paper_width_pixels": 384,
+    "qr_size_pixels": 144,
+    "transport": "mock",
+}
+_THERMAL_ENV_VARS = {
+    "columns": "MOMIR_THERMAL_COLUMNS",
+    "paper_width_pixels": "MOMIR_THERMAL_PAPER_WIDTH_PIXELS",
+    "qr_size_pixels": "MOMIR_THERMAL_QR_SIZE_PIXELS",
+    "transport": "MOMIR_THERMAL_TRANSPORT",
+}
+# MOMIR_THERMAL_PRINTER_CONFIG_END
+
+
 def _config_path() -> Path:
     configured = os.environ.get("MOMIR_CONFIG_PATH", "").strip()
     return Path(configured).expanduser() if configured else DEFAULT_CONFIG_PATH
@@ -155,6 +172,171 @@ def save_printer_margins(values: dict[str, Any]) -> dict[str, int]:
     temporary.replace(path)
     path.chmod(0o600)
     return margins
+
+
+# MOMIR_THERMAL_PRINTER_FUNCTIONS_START
+def _coerce_thermal_integer(
+    name: str,
+    raw: Any,
+    minimum: int,
+    maximum: int,
+) -> int:
+    if isinstance(raw, bool):
+        raise RuntimeError(f"Thermal printer {name} must be an integer.")
+    try:
+        value = int(str(raw).strip())
+    except (TypeError, ValueError) as exc:
+        raise RuntimeError(f"Thermal printer {name} must be an integer.") from exc
+    if not minimum <= value <= maximum:
+        raise RuntimeError(
+            f"Thermal printer {name} must be between {minimum} and {maximum}."
+        )
+    return value
+
+
+def get_printer_type() -> str:
+    """Return the selected printer implementation."""
+
+    value = os.environ.get("MOMIR_PRINTER_TYPE", "").strip()
+    if not value:
+        printer = load_local_config().get("printer", {})
+        if isinstance(printer, dict):
+            value = str(printer.get("type") or "").strip()
+    value = value or "photo"
+    if value not in PRINTER_TYPES:
+        raise RuntimeError(
+            "Configured printer type must be 'photo' or 'thermal_58mm'."
+        )
+    return value
+
+
+def get_thermal_printer_settings() -> dict[str, Any]:
+    """Return validated settings for the 58 mm thermal renderer."""
+
+    printer = load_local_config().get("printer", {})
+    if not isinstance(printer, dict):
+        printer = {}
+    configured = printer.get("thermal", {})
+    if configured in (None, ""):
+        configured = {}
+    if not isinstance(configured, dict):
+        raise RuntimeError("Thermal printer settings must be a JSON object.")
+
+    values: dict[str, Any] = {}
+    for name, default in DEFAULT_THERMAL_PRINTER_SETTINGS.items():
+        raw: Any = os.environ.get(_THERMAL_ENV_VARS[name], "").strip()
+        if raw == "":
+            raw = configured.get(name, default)
+        values[name] = raw
+
+    settings = {
+        "columns": _coerce_thermal_integer(
+            "columns",
+            values["columns"],
+            24,
+            48,
+        ),
+        "paper_width_pixels": _coerce_thermal_integer(
+            "paper width",
+            values["paper_width_pixels"],
+            256,
+            576,
+        ),
+        "qr_size_pixels": _coerce_thermal_integer(
+            "QR size",
+            values["qr_size_pixels"],
+            96,
+            240,
+        ),
+        "transport": str(values["transport"] or "mock").strip().lower(),
+    }
+    if settings["transport"] != "mock":
+        raise RuntimeError(
+            "Only the thermal 'mock' transport is available until hardware "
+            "testing is complete."
+        )
+    if settings["qr_size_pixels"] > settings["paper_width_pixels"] - 24:
+        raise RuntimeError("Thermal QR size must fit within the paper width.")
+    return settings
+
+
+def get_printer_settings() -> dict[str, Any]:
+    return {
+        "type": get_printer_type(),
+        "thermal": get_thermal_printer_settings(),
+    }
+
+
+def _write_local_config(config: dict[str, Any]) -> None:
+    path = get_config_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(f".{path.name}.tmp")
+    temporary.write_text(json.dumps(config, indent=2) + "\n", encoding="utf-8")
+    temporary.chmod(0o600)
+    temporary.replace(path)
+    path.chmod(0o600)
+
+
+def save_printer_settings(values: dict[str, Any]) -> dict[str, Any]:
+    """Persist printer type and thermal preview settings."""
+
+    if not isinstance(values, dict):
+        raise RuntimeError("Printer settings must be a JSON object.")
+
+    printer_type = str(values.get("type") or get_printer_type()).strip()
+    if printer_type not in PRINTER_TYPES:
+        raise RuntimeError(
+            "Printer type must be 'photo' or 'thermal_58mm'."
+        )
+
+    supplied_thermal = values.get("thermal", {})
+    if supplied_thermal in (None, ""):
+        supplied_thermal = {}
+    if not isinstance(supplied_thermal, dict):
+        raise RuntimeError("Thermal printer settings must be a JSON object.")
+
+    current = get_thermal_printer_settings()
+    merged = {**current, **supplied_thermal}
+    thermal = {
+        "columns": _coerce_thermal_integer(
+            "columns",
+            merged["columns"],
+            24,
+            48,
+        ),
+        "paper_width_pixels": _coerce_thermal_integer(
+            "paper width",
+            merged["paper_width_pixels"],
+            256,
+            576,
+        ),
+        "qr_size_pixels": _coerce_thermal_integer(
+            "QR size",
+            merged["qr_size_pixels"],
+            96,
+            240,
+        ),
+        "transport": str(merged.get("transport") or "mock").strip().lower(),
+    }
+    if thermal["transport"] != "mock":
+        raise RuntimeError(
+            "Only the thermal 'mock' transport is available until hardware "
+            "testing is complete."
+        )
+    if thermal["qr_size_pixels"] > thermal["paper_width_pixels"] - 24:
+        raise RuntimeError("Thermal QR size must fit within the paper width.")
+
+    config = load_local_config()
+    printer = config.get("printer")
+    if not isinstance(printer, dict):
+        printer = {}
+    config["printer"] = printer
+    printer["type"] = printer_type
+    printer["thermal"] = thermal
+    _write_local_config(config)
+
+    return {"type": printer_type, "thermal": thermal}
+# MOMIR_THERMAL_PRINTER_FUNCTIONS_END
 
 
 def _config_section(name: str) -> dict[str, Any]:

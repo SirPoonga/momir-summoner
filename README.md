@@ -697,3 +697,60 @@ Momir Summoner is an independent fan-made project and is not affiliated with, en
 ## License
 
 The project source code is licensed under the GNU General Public License v3.0 only (`GPL-3.0-only`). See [LICENSE](LICENSE).
+
+<!-- MOMIR_THERMAL_PRINTER_START -->
+## Printer types and 58 mm thermal preparation
+
+Momir Summoner supports two printer output modes:
+
+- **Photo printer** keeps the existing full-card image renderer and Bluetooth
+  file-transfer workflow.
+- **58 mm thermal receipt printer** uses a purpose-built, black-and-white
+  receipt layout for faster gameplay.
+
+The thermal receipt contains only:
+
+- card name and mana cost
+- creature type
+- rules text
+- power/toughness
+- a QR code linking to the local card-details page
+
+It does not include artwork, mana value, set, collector number, rarity, flavor
+text, or legal text.
+
+### Thermal mock mode
+
+Before a physical printer is configured, select **58 mm thermal receipt
+printer** on the Settings page. Thermal jobs use the `mock` transport and save:
+
+```text
+prints/thermal-mock/<timestamp>_<card>.txt
+prints/thermal-mock/<timestamp>_<card>.png
+```
+
+The text file shows the native-text payload. The monochrome PNG is a visual
+preview with the QR code as the only graphic. Mock jobs do not mark a card as
+physically printed.
+
+Configurable preparation settings are:
+
+```json
+{
+  "printer": {
+    "type": "thermal_58mm",
+    "thermal": {
+      "columns": 32,
+      "paper_width_pixels": 384,
+      "qr_size_pixels": 144,
+      "transport": "mock"
+    }
+  }
+}
+```
+
+The default printer type remains `photo`, so existing installations continue
+using the current photo-printer workflow. Bluetooth pairing, native ESC/POS
+text/QR commands, character encoding, feed distance, and cutting behavior will
+be added after the exact thermal printer is available for testing.
+<!-- MOMIR_THERMAL_PRINTER_END -->

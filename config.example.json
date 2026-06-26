@@ -1,5 +1,6 @@
 {
   "printer": {
+    "type": "photo",
     "bluetooth_address": "",
     "channel": "4",
     "margins": {
@@ -7,6 +8,12 @@
       "top": 45,
       "right": 25,
       "bottom": 40
+    },
+    "thermal": {
+      "columns": 32,
+      "paper_width_pixels": 384,
+      "qr_size_pixels": 144,
+      "transport": "mock"
     }
   },
   "web": {
