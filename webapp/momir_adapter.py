@@ -41,7 +41,11 @@ from render_printer import (
     print_printer,
 )
 
-from thermal_printer import print_thermal, render_thermal_preview
+from thermal_printer import (
+    print_thermal,
+    probe_thermal_connection,
+    render_thermal_preview,
+)
 
 LAST_CARD = None
 LAST_RENDERED = None
@@ -237,15 +241,22 @@ def print_last():
                 return {
                     "ok": False,
                     "error": thermal_result.get("error")
-                    or "Thermal mock job could not be created.",
+                    or "Thermal receipt could not be printed.",
                 }
-            output = (
-                "Thermal mock job saved to "
-                f"{thermal_result.get('text_path')} and "
-                f"{thermal_result.get('preview_path')}."
-            )
-            # A mock file is not a physical print, so printed-card tracking
-            # must not be changed yet.
+
+            if thermal_result.get("transport") == "mock":
+                output = (
+                    "Thermal mock job saved to "
+                    f"{thermal_result.get('text_path')} and "
+                    f"{thermal_result.get('preview_path')}."
+                )
+            else:
+                output = (
+                    "Printed thermal receipt through Bluetooth "
+                    f"{thermal_result.get('address')} on RFCOMM channel "
+                    f"{thermal_result.get('channel')}."
+                )
+
             printed_card = card
         else:
             # Generate the full 450x730 photo image only when it is needed.
@@ -471,19 +482,43 @@ def clear_printer_status_cache():
 def _load_printer_status():
     if get_printer_type() == "thermal_58mm":
         settings = get_thermal_printer_settings()
+        if settings["transport"] == "mock":
+            return {
+                "connected": True,
+                "message": "Thermal Mock Ready",
+                "details": (
+                    "Jobs are saved under prints/thermal-mock/ and are not "
+                    "sent to physical hardware."
+                ),
+                "printer_type": "thermal_58mm",
+                "transport": "mock",
+            }
+
+        probe = probe_thermal_connection(settings)
+        connected = bool(probe.get("ok"))
+        if connected:
+            details = (
+                f"PT210-compatible RFCOMM printer at "
+                f"{settings['bluetooth_address']}, channel "
+                f"{settings['rfcomm_channel']}."
+            )
+        else:
+            details = (
+                "Could not reach the thermal printer: "
+                f"{probe.get('error') or 'unknown Bluetooth error'}"
+            )
         return {
-            "connected": True,
-            "message": "Thermal Mock Ready",
-            "details": (
-                "No physical printer is used yet. Jobs are saved under "
-                "prints/thermal-mock/ using "
-                f"{settings['columns']} columns, "
-                f"{settings['paper_width_pixels']} dots, and a "
-                f"{settings['qr_size_pixels']}-dot QR code."
+            "connected": connected,
+            "message": (
+                "Thermal Printer Ready"
+                if connected
+                else "Thermal Printer Unavailable"
             ),
+            "details": details,
             "printer_type": "thermal_58mm",
-            "transport": "mock",
+            "transport": "bluetooth_rfcomm",
         }
+
     mac = get_printer_address(required=False)
 
     if not mac:

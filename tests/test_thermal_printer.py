@@ -163,6 +163,70 @@ class ThermalPrinterTests(unittest.TestCase):
             self.assertTrue(Path(result["text_path"]).exists())
             self.assertTrue(Path(result["preview_path"]).exists())
 
+    def test_bluetooth_payload_uses_native_text_and_qr(self):
+        settings = {
+            "columns": 32,
+            "paper_width_pixels": 384,
+            "qr_size_pixels": 144,
+            "transport": "bluetooth_rfcomm",
+            "bluetooth_address": "10:22:33:05:45:58",
+            "rfcomm_channel": 1,
+            "connect_timeout_seconds": 15,
+            "post_write_delay_seconds": 0.0,
+            "feed_lines": 3,
+            "qr_module_size": 5,
+        }
+        payload = thermal_printer.build_bluetooth_escpos_payload(
+            SAMPLE_CARD,
+            settings,
+        )
+        self.assertIn(b"Verdant Test Creature", payload)
+        self.assertIn(b"4GG", payload)
+        self.assertNotIn(b"{4}{G}{G}", payload)
+        self.assertIn(b"\x1d\x28\x6b\x03\x00\x31\x51\x30", payload)
+
+    def test_direct_rfcomm_transport_connects_and_sends(self):
+        settings = {
+            "columns": 32,
+            "paper_width_pixels": 384,
+            "qr_size_pixels": 144,
+            "transport": "bluetooth_rfcomm",
+            "bluetooth_address": "10:22:33:05:45:58",
+            "rfcomm_channel": 1,
+            "connect_timeout_seconds": 15,
+            "post_write_delay_seconds": 0.0,
+            "feed_lines": 3,
+            "qr_module_size": 5,
+        }
+
+        class FakeSocket:
+            def __init__(self):
+                self.connected_to = None
+                self.payload = b""
+                self.closed = False
+
+            def settimeout(self, value):
+                self.timeout = value
+
+            def connect(self, target):
+                self.connected_to = target
+
+            def sendall(self, payload):
+                self.payload = payload
+
+            def close(self):
+                self.closed = True
+
+        fake = FakeSocket()
+        with patch.object(thermal_printer.socket, "socket", return_value=fake):
+            result = thermal_printer.print_bluetooth_rfcomm(SAMPLE_CARD, settings)
+
+        self.assertTrue(result["ok"])
+        self.assertEqual(fake.connected_to, ("10:22:33:05:45:58", 1))
+        self.assertIn(b"Verdant Test Creature", fake.payload)
+        self.assertTrue(fake.closed)
+
+
 
 if __name__ == "__main__":
     unittest.main()

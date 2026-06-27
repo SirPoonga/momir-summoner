@@ -110,9 +110,17 @@ function setPrinterTypeVisibility(type) {
 function fillPrinterSettings(settings = {}) {
   const thermal = settings.thermal || {};
   byId("printerType").value = settings.type || "photo";
+  byId("thermalTransport").value =
+    thermal.transport || "bluetooth_rfcomm";
+  byId("thermalBluetoothAddress").value =
+    thermal.bluetooth_address || "10:22:33:05:45:58";
+  byId("thermalRfcommChannel").value =
+    thermal.rfcomm_channel ?? 1;
   byId("thermalColumns").value = thermal.columns ?? 32;
-  byId("thermalPaperWidth").value = thermal.paper_width_pixels ?? 384;
-  byId("thermalQrSize").value = thermal.qr_size_pixels ?? 144;
+  byId("thermalPaperWidth").value =
+    thermal.paper_width_pixels ?? 384;
+  byId("thermalQrSize").value =
+    thermal.qr_size_pixels ?? 144;
   setPrinterTypeVisibility(byId("printerType").value);
 }
 
@@ -120,10 +128,16 @@ function printerSettingsValues() {
   return {
     type: byId("printerType").value,
     thermal: {
+      transport: byId("thermalTransport").value,
+      bluetooth_address:
+        byId("thermalBluetoothAddress").value.trim(),
+      rfcomm_channel:
+        Number(byId("thermalRfcommChannel").value),
       columns: Number(byId("thermalColumns").value),
-      paper_width_pixels: Number(byId("thermalPaperWidth").value),
-      qr_size_pixels: Number(byId("thermalQrSize").value),
-      transport: "mock",
+      paper_width_pixels:
+        Number(byId("thermalPaperWidth").value),
+      qr_size_pixels:
+        Number(byId("thermalQrSize").value),
     },
   };
 }
@@ -153,12 +167,15 @@ async function savePrinterMode(event) {
       body: JSON.stringify({settings: printerSettingsValues()}),
     });
     fillPrinterSettings(data.settings || {});
-    showPrinterModeMessage(
-      data.settings.type === "thermal_58mm"
-        ? "Thermal mock mode saved. Use Preview Current Card or Print to generate test files."
-        : "Photo printer mode saved.",
-      "success",
-    );
+    const thermal = data.settings.thermal || {};
+    let message = "Photo printer mode saved.";
+    if (data.settings.type === "thermal_58mm") {
+      message =
+        thermal.transport === "bluetooth_rfcomm"
+          ? `Bluetooth thermal printer saved: ${thermal.bluetooth_address}, channel ${thermal.rfcomm_channel}.`
+          : "Thermal mock mode saved.";
+    }
+    showPrinterModeMessage(message, "success");
     await refreshDashboard();
   } catch (error) {
     showPrinterModeMessage(
@@ -186,14 +203,13 @@ async function previewCurrentThermalCard() {
       throw new Error(message || "No current card is selected.");
     }
     const blob = await response.blob();
-    if (thermalPreviewObjectUrl) URL.revokeObjectURL(thermalPreviewObjectUrl);
+    if (thermalPreviewObjectUrl) {
+      URL.revokeObjectURL(thermalPreviewObjectUrl);
+    }
     thermalPreviewObjectUrl = URL.createObjectURL(blob);
     image.src = thermalPreviewObjectUrl;
     wrap.classList.remove("hidden");
-    showPrinterModeMessage(
-      "Preview rendered with native-text layout and a QR graphic.",
-      "success",
-    );
+    showPrinterModeMessage("Thermal preview rendered.", "success");
   } catch (error) {
     wrap.classList.add("hidden");
     showPrinterModeMessage(

@@ -77,13 +77,26 @@
 
    <div id="thermalPrinterSettings" class="thermal-printer-settings hidden">
     <p class="settings-note">
-     Until the printer arrives, thermal jobs use mock mode. Printing saves a
-     text job and a monochrome PNG preview under
-     <code>prints/thermal-mock/</code>; it does not mark the card as physically
-     printed.
+     Bluetooth mode sends native ESC/POS text and a native QR code directly
+     through an RFCOMM socket. Mock mode remains available for testing.
     </p>
 
     <div class="thermal-settings-grid">
+     <label class="settings-field">
+      <span>Thermal transport</span>
+      <select id="thermalTransport">
+       <option value="bluetooth_rfcomm">Bluetooth RFCOMM</option>
+       <option value="mock">Mock files only</option>
+      </select>
+     </label>
+     <label class="settings-field">
+      <span>Bluetooth address</span>
+      <input id="thermalBluetoothAddress" type="text" autocomplete="off" placeholder="AA:BB:CC:DD:EE:FF" required>
+     </label>
+     <label class="settings-field">
+      <span>RFCOMM channel</span>
+      <input id="thermalRfcommChannel" type="number" min="1" max="30" step="1" required>
+     </label>
      <label class="settings-field">
       <span>Characters per line</span>
       <input id="thermalColumns" type="number" min="24" max="48" step="1" required>
@@ -93,7 +106,7 @@
       <input id="thermalPaperWidth" type="number" min="256" max="576" step="8" required>
      </label>
      <label class="settings-field">
-      <span>QR size (dots)</span>
+      <span>QR preview size (dots)</span>
       <input id="thermalQrSize" type="number" min="96" max="240" step="8" required>
      </label>
     </div>

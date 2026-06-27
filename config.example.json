@@ -13,7 +13,13 @@
       "columns": 32,
       "paper_width_pixels": 384,
       "qr_size_pixels": 144,
-      "transport": "mock"
+      "transport": "bluetooth_rfcomm",
+      "bluetooth_address": "10:22:33:05:45:58",
+      "rfcomm_channel": 1,
+      "connect_timeout_seconds": 15,
+      "post_write_delay_seconds": 1.0,
+      "feed_lines": 1,
+      "qr_module_size": 4
     }
   },
   "web": {

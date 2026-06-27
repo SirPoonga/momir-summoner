@@ -699,58 +699,31 @@ Momir Summoner is an independent fan-made project and is not affiliated with, en
 The project source code is licensed under the GNU General Public License v3.0 only (`GPL-3.0-only`). See [LICENSE](LICENSE).
 
 <!-- MOMIR_THERMAL_PRINTER_START -->
-## Printer types and 58 mm thermal preparation
+## Printer types and 58 mm thermal printing
 
 Momir Summoner supports two printer output modes:
 
-- **Photo printer** keeps the existing full-card image renderer and Bluetooth
-  file-transfer workflow.
-- **58 mm thermal receipt printer** uses a purpose-built, black-and-white
-  receipt layout for faster gameplay.
+- **Photo printer** keeps the existing full-card image renderer and photo
+  printer workflow.
+- **58 mm thermal receipt printer** prints a fast black-and-white receipt using
+  native ESC/POS text and a native QR code.
 
-The thermal receipt contains only:
+The thermal receipt contains only the card name and mana cost, creature type,
+rules text, power/toughness, and QR code. It does not include artwork, mana
+value, set, collector number, rarity, flavor text, or legal text.
 
-- card name and mana cost
-- creature type
-- rules text
-- power/toughness
-- a QR code linking to the local card-details page
-
-It does not include artwork, mana value, set, collector number, rarity, flavor
-text, or legal text.
-
-### Thermal mock mode
-
-Before a physical printer is configured, select **58 mm thermal receipt
-printer** on the Settings page. Thermal jobs use the `mock` transport and save:
+### Confirmed PT210 Bluetooth configuration
 
 ```text
-prints/thermal-mock/<timestamp>_<card>.txt
-prints/thermal-mock/<timestamp>_<card>.png
+Name: PT210_4558
+Bluetooth address: 10:22:33:05:45:58
+RFCOMM channel: 1
+Transport: direct Python Bluetooth RFCOMM socket
 ```
 
-The text file shows the native-text payload. The monochrome PNG is a visual
-preview with the QR code as the only graphic. Mock jobs do not mark a card as
-physically printed.
+The application does not use `/dev/rfcomm0`. It opens a direct RFCOMM socket
+for each print and sends native ESC/POS text and native QR commands.
 
-Configurable preparation settings are:
-
-```json
-{
-  "printer": {
-    "type": "thermal_58mm",
-    "thermal": {
-      "columns": 32,
-      "paper_width_pixels": 384,
-      "qr_size_pixels": 144,
-      "transport": "mock"
-    }
-  }
-}
-```
-
-The default printer type remains `photo`, so existing installations continue
-using the current photo-printer workflow. Bluetooth pairing, native ESC/POS
-text/QR commands, character encoding, feed distance, and cutting behavior will
-be added after the exact thermal printer is available for testing.
+Mock mode remains available by setting `transport` to `mock`. Mock jobs are
+saved under `prints/thermal-mock/`.
 <!-- MOMIR_THERMAL_PRINTER_END -->

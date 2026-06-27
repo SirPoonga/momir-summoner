@@ -27,17 +27,30 @@ _PRINTER_MARGIN_ENV_VARS = {
 
 # MOMIR_THERMAL_PRINTER_CONFIG_START
 PRINTER_TYPES = ("photo", "thermal_58mm")
+THERMAL_TRANSPORTS = ("mock", "bluetooth_rfcomm")
 DEFAULT_THERMAL_PRINTER_SETTINGS = {
     "columns": 32,
     "paper_width_pixels": 384,
     "qr_size_pixels": 144,
-    "transport": "mock",
+    "transport": "bluetooth_rfcomm",
+    "bluetooth_address": "10:22:33:05:45:58",
+    "rfcomm_channel": 1,
+    "connect_timeout_seconds": 15,
+    "post_write_delay_seconds": 1.0,
+    "feed_lines": 1,
+    "qr_module_size": 4,
 }
 _THERMAL_ENV_VARS = {
     "columns": "MOMIR_THERMAL_COLUMNS",
     "paper_width_pixels": "MOMIR_THERMAL_PAPER_WIDTH_PIXELS",
     "qr_size_pixels": "MOMIR_THERMAL_QR_SIZE_PIXELS",
     "transport": "MOMIR_THERMAL_TRANSPORT",
+    "bluetooth_address": "MOMIR_THERMAL_BLUETOOTH_ADDRESS",
+    "rfcomm_channel": "MOMIR_THERMAL_RFCOMM_CHANNEL",
+    "connect_timeout_seconds": "MOMIR_THERMAL_CONNECT_TIMEOUT_SECONDS",
+    "post_write_delay_seconds": "MOMIR_THERMAL_POST_WRITE_DELAY_SECONDS",
+    "feed_lines": "MOMIR_THERMAL_FEED_LINES",
+    "qr_module_size": "MOMIR_THERMAL_QR_MODULE_SIZE",
 }
 # MOMIR_THERMAL_PRINTER_CONFIG_END
 
@@ -194,9 +207,46 @@ def _coerce_thermal_integer(
     return value
 
 
-def get_printer_type() -> str:
-    """Return the selected printer implementation."""
+def _coerce_thermal_float(
+    name: str,
+    raw: Any,
+    minimum: float,
+    maximum: float,
+) -> float:
+    if isinstance(raw, bool):
+        raise RuntimeError(f"Thermal printer {name} must be a number.")
+    try:
+        value = float(str(raw).strip())
+    except (TypeError, ValueError) as exc:
+        raise RuntimeError(f"Thermal printer {name} must be a number.") from exc
+    if not minimum <= value <= maximum:
+        raise RuntimeError(
+            f"Thermal printer {name} must be between {minimum} and {maximum}."
+        )
+    return value
 
+
+def _normalize_bluetooth_address(raw: Any) -> str:
+    value = str(raw or "").strip().upper()
+    parts = value.split(":")
+    if len(parts) != 6:
+        raise RuntimeError(
+            "Thermal printer Bluetooth address must use "
+            "AA:BB:CC:DD:EE:FF format."
+        )
+    try:
+        valid = all(len(part) == 2 and 0 <= int(part, 16) <= 255 for part in parts)
+    except ValueError:
+        valid = False
+    if not valid:
+        raise RuntimeError(
+            "Thermal printer Bluetooth address must use "
+            "AA:BB:CC:DD:EE:FF format."
+        )
+    return value
+
+
+def get_printer_type() -> str:
     value = os.environ.get("MOMIR_PRINTER_TYPE", "").strip()
     if not value:
         printer = load_local_config().get("printer", {})
@@ -211,8 +261,6 @@ def get_printer_type() -> str:
 
 
 def get_thermal_printer_settings() -> dict[str, Any]:
-    """Return validated settings for the 58 mm thermal renderer."""
-
     printer = load_local_config().get("printer", {})
     if not isinstance(printer, dict):
         printer = {}
@@ -229,32 +277,38 @@ def get_thermal_printer_settings() -> dict[str, Any]:
             raw = configured.get(name, default)
         values[name] = raw
 
+    transport = str(values["transport"] or "mock").strip().lower()
+    if transport not in THERMAL_TRANSPORTS:
+        raise RuntimeError(
+            "Thermal transport must be 'mock' or 'bluetooth_rfcomm'."
+        )
+
     settings = {
-        "columns": _coerce_thermal_integer(
-            "columns",
-            values["columns"],
-            24,
-            48,
-        ),
+        "columns": _coerce_thermal_integer("columns", values["columns"], 24, 48),
         "paper_width_pixels": _coerce_thermal_integer(
-            "paper width",
-            values["paper_width_pixels"],
-            256,
-            576,
+            "paper width", values["paper_width_pixels"], 256, 576
         ),
         "qr_size_pixels": _coerce_thermal_integer(
-            "QR size",
-            values["qr_size_pixels"],
-            96,
-            240,
+            "QR preview size", values["qr_size_pixels"], 96, 240
         ),
-        "transport": str(values["transport"] or "mock").strip().lower(),
+        "transport": transport,
+        "bluetooth_address": _normalize_bluetooth_address(values["bluetooth_address"]),
+        "rfcomm_channel": _coerce_thermal_integer(
+            "RFCOMM channel", values["rfcomm_channel"], 1, 30
+        ),
+        "connect_timeout_seconds": _coerce_thermal_integer(
+            "connection timeout", values["connect_timeout_seconds"], 2, 60
+        ),
+        "post_write_delay_seconds": _coerce_thermal_float(
+            "post-write delay", values["post_write_delay_seconds"], 0.0, 10.0
+        ),
+        "feed_lines": _coerce_thermal_integer(
+            "feed lines", values["feed_lines"], 1, 8
+        ),
+        "qr_module_size": _coerce_thermal_integer(
+            "native QR module size", values["qr_module_size"], 3, 8
+        ),
     }
-    if settings["transport"] != "mock":
-        raise RuntimeError(
-            "Only the thermal 'mock' transport is available until hardware "
-            "testing is complete."
-        )
     if settings["qr_size_pixels"] > settings["paper_width_pixels"] - 24:
         raise RuntimeError("Thermal QR size must fit within the paper width.")
     return settings
@@ -278,16 +332,12 @@ def _write_local_config(config: dict[str, Any]) -> None:
 
 
 def save_printer_settings(values: dict[str, Any]) -> dict[str, Any]:
-    """Persist printer type and thermal preview settings."""
-
     if not isinstance(values, dict):
         raise RuntimeError("Printer settings must be a JSON object.")
 
     printer_type = str(values.get("type") or get_printer_type()).strip()
     if printer_type not in PRINTER_TYPES:
-        raise RuntimeError(
-            "Printer type must be 'photo' or 'thermal_58mm'."
-        )
+        raise RuntimeError("Printer type must be 'photo' or 'thermal_58mm'.")
 
     supplied_thermal = values.get("thermal", {})
     if supplied_thermal in (None, ""):
@@ -297,32 +347,40 @@ def save_printer_settings(values: dict[str, Any]) -> dict[str, Any]:
 
     current = get_thermal_printer_settings()
     merged = {**current, **supplied_thermal}
+    transport = str(merged.get("transport") or "mock").strip().lower()
+    if transport not in THERMAL_TRANSPORTS:
+        raise RuntimeError(
+            "Thermal transport must be 'mock' or 'bluetooth_rfcomm'."
+        )
+
     thermal = {
-        "columns": _coerce_thermal_integer(
-            "columns",
-            merged["columns"],
-            24,
-            48,
-        ),
+        "columns": _coerce_thermal_integer("columns", merged["columns"], 24, 48),
         "paper_width_pixels": _coerce_thermal_integer(
-            "paper width",
-            merged["paper_width_pixels"],
-            256,
-            576,
+            "paper width", merged["paper_width_pixels"], 256, 576
         ),
         "qr_size_pixels": _coerce_thermal_integer(
-            "QR size",
-            merged["qr_size_pixels"],
-            96,
-            240,
+            "QR preview size", merged["qr_size_pixels"], 96, 240
         ),
-        "transport": str(merged.get("transport") or "mock").strip().lower(),
+        "transport": transport,
+        "bluetooth_address": _normalize_bluetooth_address(
+            merged.get("bluetooth_address")
+        ),
+        "rfcomm_channel": _coerce_thermal_integer(
+            "RFCOMM channel", merged.get("rfcomm_channel"), 1, 30
+        ),
+        "connect_timeout_seconds": _coerce_thermal_integer(
+            "connection timeout", merged.get("connect_timeout_seconds"), 2, 60
+        ),
+        "post_write_delay_seconds": _coerce_thermal_float(
+            "post-write delay", merged.get("post_write_delay_seconds"), 0.0, 10.0
+        ),
+        "feed_lines": _coerce_thermal_integer(
+            "feed lines", merged.get("feed_lines"), 1, 8
+        ),
+        "qr_module_size": _coerce_thermal_integer(
+            "native QR module size", merged.get("qr_module_size"), 3, 8
+        ),
     }
-    if thermal["transport"] != "mock":
-        raise RuntimeError(
-            "Only the thermal 'mock' transport is available until hardware "
-            "testing is complete."
-        )
     if thermal["qr_size_pixels"] > thermal["paper_width_pixels"] - 24:
         raise RuntimeError("Thermal QR size must fit within the paper width.")
 
@@ -334,7 +392,6 @@ def save_printer_settings(values: dict[str, Any]) -> dict[str, Any]:
     printer["type"] = printer_type
     printer["thermal"] = thermal
     _write_local_config(config)
-
     return {"type": printer_type, "thermal": thermal}
 # MOMIR_THERMAL_PRINTER_FUNCTIONS_END
 

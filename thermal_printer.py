@@ -4,6 +4,9 @@
 from __future__ import annotations
 
 import re
+import socket
+import struct
+import time
 import textwrap
 import threading
 from datetime import datetime
@@ -403,18 +406,186 @@ def write_mock_thermal_job(card: dict, settings: dict | None = None) -> dict:
     }
 
 
+def _escpos_text(value: object) -> bytes:
+    return normalize_thermal_text(value).encode("ascii", errors="replace")
+
+
+def _native_qr_commands(payload: str, module_size: int) -> bytes:
+    data = payload.encode("utf-8")
+    store_length = len(data) + 3
+    if store_length > 65535:
+        raise ValueError("Thermal QR payload is too long.")
+
+    commands = bytearray()
+    commands += b"\x1d\x28\x6b\x04\x00\x31\x41\x32\x00"
+    commands += b"\x1d\x28\x6b\x03\x00\x31\x43"
+    commands += bytes((module_size,))
+    commands += b"\x1d\x28\x6b\x03\x00\x31\x45\x31"
+    commands += b"\x1d\x28\x6b"
+    commands += struct.pack("<H", store_length)
+    commands += b"\x31\x50\x30"
+    commands += data
+    commands += b"\x1d\x28\x6b\x03\x00\x31\x51\x30"
+    return bytes(commands)
+
+
+def build_bluetooth_escpos_payload(
+    card: dict,
+    settings: dict | None = None,
+) -> bytes:
+    settings = dict(settings or get_thermal_printer_settings())
+    columns = int(settings["columns"])
+    module_size = int(settings.get("qr_module_size", 5))
+    feed_lines = int(settings.get("feed_lines", 1))
+
+    name = normalize_thermal_text(card.get("name")) or "Unknown"
+    mana_cost = normalize_thermal_text(card.get("mana_cost"))
+    type_line = normalize_thermal_text(card.get("type_line"))
+    oracle_text = normalize_thermal_text(card.get("oracle_text"))
+    power = normalize_thermal_text(card.get("power")) or "?"
+    toughness = normalize_thermal_text(card.get("toughness")) or "?"
+    qr_url = local_card_url(card)
+
+    output = bytearray()
+    output += b"\x1b\x40"
+    output += b"\x1b\x33\x18"
+    output += b"\x1b\x61\x00"
+
+    output += b"\x1b\x45\x01"
+    for line in _header_lines(name, mana_cost, columns):
+        output += _escpos_text(line) + b"\r\n"
+    output += b"\x1b\x45\x00"
+
+    if type_line:
+        for line in _wrap_paragraph(type_line, columns):
+            output += _escpos_text(line) + b"\r\n"
+
+    divider = "-" * columns
+    output += _escpos_text(divider) + b"\r\n"
+
+    paragraphs = [
+        paragraph
+        for paragraph in oracle_text.split("\n")
+        if paragraph.strip()
+    ]
+    for paragraph_index, paragraph in enumerate(paragraphs):
+        wrapped = _wrap_paragraph(paragraph, columns)
+        for line_index, line in enumerate(wrapped):
+            is_last_line = line_index == len(wrapped) - 1
+            has_next_ability = paragraph_index != len(paragraphs) - 1
+            if is_last_line and has_next_ability:
+                output += b"\x1b\x33\x20"
+            output += _escpos_text(line) + b"\r\n"
+            if is_last_line and has_next_ability:
+                output += b"\x1b\x33\x18"
+
+    output += _escpos_text(divider) + b"\r\n"
+
+    output += b"\x1b\x61\x02"
+    output += b"\x1b\x45\x01"
+    output += _escpos_text(f"{power}/{toughness}") + b"\r\n"
+    output += b"\x1b\x45\x00"
+
+    output += b"\x1b\x61\x01"
+    output += _native_qr_commands(qr_url, module_size)
+    output += b"\r\n"
+    output += b"\n" * feed_lines
+    output += b"\x1b\x61\x00"
+    return bytes(output)
+
+
+def probe_thermal_connection(settings: dict | None = None) -> dict:
+    settings = dict(settings or get_thermal_printer_settings())
+    if settings.get("transport") == "mock":
+        return {
+            "ok": True,
+            "transport": "mock",
+            "message": "Thermal mock mode is ready.",
+        }
+
+    address = settings["bluetooth_address"]
+    channel = int(settings["rfcomm_channel"])
+    timeout = int(settings["connect_timeout_seconds"])
+
+    sock = socket.socket(
+        socket.AF_BLUETOOTH,
+        socket.SOCK_STREAM,
+        socket.BTPROTO_RFCOMM,
+    )
+    sock.settimeout(timeout)
+    try:
+        sock.connect((address, channel))
+    except OSError as exc:
+        return {
+            "ok": False,
+            "transport": "bluetooth_rfcomm",
+            "address": address,
+            "channel": channel,
+            "error": str(exc),
+        }
+    finally:
+        sock.close()
+
+    return {
+        "ok": True,
+        "transport": "bluetooth_rfcomm",
+        "address": address,
+        "channel": channel,
+        "message": f"Bluetooth printer reachable at {address}, channel {channel}.",
+    }
+
+
+def print_bluetooth_rfcomm(
+    card: dict,
+    settings: dict | None = None,
+) -> dict:
+    settings = dict(settings or get_thermal_printer_settings())
+    address = settings["bluetooth_address"]
+    channel = int(settings["rfcomm_channel"])
+    timeout = int(settings["connect_timeout_seconds"])
+    delay = float(settings["post_write_delay_seconds"])
+    payload = build_bluetooth_escpos_payload(card, settings)
+
+    sock = socket.socket(
+        socket.AF_BLUETOOTH,
+        socket.SOCK_STREAM,
+        socket.BTPROTO_RFCOMM,
+    )
+    sock.settimeout(timeout)
+    try:
+        sock.connect((address, channel))
+        sock.sendall(payload)
+        if delay:
+            time.sleep(delay)
+    except OSError as exc:
+        return {
+            "ok": False,
+            "transport": "bluetooth_rfcomm",
+            "address": address,
+            "channel": channel,
+            "error": f"Bluetooth thermal print failed: {exc}",
+        }
+    finally:
+        sock.close()
+
+    return {
+        "ok": True,
+        "transport": "bluetooth_rfcomm",
+        "address": address,
+        "channel": channel,
+        "bytes_sent": len(payload),
+        "qr_url": local_card_url(card),
+        "physical_print": True,
+    }
+
+
 def print_thermal(card: dict, settings: dict | None = None) -> dict:
-    """Dispatch a thermal job.
-
-    Phase 1 intentionally supports only the mock transport. The real
-    Bluetooth/ESC-POS transport will be selected after the printer's command
-    set and connection profile are verified.
-    """
-
     settings = dict(settings or get_thermal_printer_settings())
     transport = settings.get("transport", "mock")
     if transport == "mock":
         return write_mock_thermal_job(card, settings)
+    if transport == "bluetooth_rfcomm":
+        return print_bluetooth_rfcomm(card, settings)
     return {
         "ok": False,
         "transport": transport,
