@@ -35,6 +35,21 @@ The Raspberry Pi performs the application, database, rendering, and printing wor
 
 ## Hardware
 
+<!-- hardware-used:start -->
+### Hardware used in the tested build
+
+These are the specific components used for the portable Raspberry Pi 3 and thermal-printer setup:
+
+- [58 mm Bluetooth thermal receipt printer](https://www.amazon.com/dp/B0CDLX1DR9)
+- [Portable battery pack](https://www.amazon.com/dp/B00ME3ZH7C)
+- [USB Wi-Fi adapter](https://www.amazon.com/dp/B008IFXQFU)
+- [Short USB power cable](https://www.amazon.com/dp/B013G4EAEI)
+- [Raspberry Pi 3 Model B](https://www.amazon.com/dp/B07BDR5PDW)
+- [Raspberry Pi 3 case](https://www.amazon.com/dp/B07D5FVLGN)
+
+Product listings and availability may change.
+<!-- hardware-used:end -->
+
 ### Required
 
 - Raspberry Pi with Wi-Fi and Bluetooth
