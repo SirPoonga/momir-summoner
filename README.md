@@ -518,7 +518,17 @@ wlan1  USB Wi-Fi       -> Internet for updates
 After joining the `Momir` network, open:
 
 ```text
-http://10.42.0.1:5000
+Preferred hotspot address:
+
+```text
+http://10.42.0.1/
+```
+
+Direct application fallback:
+
+```text
+http://10.42.0.1:5000/
+```
 ```
 
 An optional captive portal can automatically open the Momir interface, or display a **Sign in to Momir** notification. Setup, helper scripts, interface checks, and troubleshooting are documented in [Dual-Wi-Fi hotspot setup](docs/dual-wifi-hotspot.md).
@@ -757,7 +767,7 @@ bookmark or home-screen icon is the most reliable launch method.
 Useful verification commands:
 
 ```bash
-ip -br addr show wlan0 wlan1
+ip -br addr | grep -E '^(wlan0|wlan1)'
 sudo systemctl is-active momir-hotspot-network.service
 sudo systemctl is-active momir-hostapd.service
 sudo systemctl is-active momir-dnsmasq.service
