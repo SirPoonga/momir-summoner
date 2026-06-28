@@ -5,7 +5,7 @@
   <title>Settings - Momir Summoner</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#111111">
-  <link rel="stylesheet" href="/static/style.css?v=23">
+  <link rel="stylesheet" href="/static/style.css?v=24">
 </head>
 <body>
   <main class="settings-page">
@@ -64,7 +64,75 @@
       <div id="settingsPrinterStatus" class="printer unknown">Checking printer...</div>
       <div id="settingsPrinterDetails" class="settings-note hidden"></div>
 
-      <div class="printer-margin-settings">
+  <!-- MOMIR_THERMAL_PRINTER_SETTINGS_START -->
+  <form id="printerModeForm" class="printer-mode-settings">
+   <h3>Printer Type</h3>
+   <label class="settings-field">
+    <span>Output format</span>
+    <select id="printerType" name="printerType">
+     <option value="photo">Photo printer</option>
+     <option value="thermal_58mm">58 mm thermal receipt printer</option>
+    </select>
+   </label>
+
+   <div id="thermalPrinterSettings" class="thermal-printer-settings hidden">
+    <p class="settings-note">
+     Bluetooth mode sends native ESC/POS text and a native QR code directly
+     through an RFCOMM socket. Mock mode remains available for testing.
+    </p>
+
+    <div class="thermal-settings-grid">
+     <label class="settings-field">
+      <span>Thermal transport</span>
+      <select id="thermalTransport">
+       <option value="bluetooth_rfcomm">Bluetooth RFCOMM</option>
+       <option value="mock">Mock files only</option>
+      </select>
+     </label>
+     <label class="settings-field">
+      <span>Bluetooth address</span>
+      <input id="thermalBluetoothAddress" type="text" autocomplete="off" placeholder="AA:BB:CC:DD:EE:FF" required>
+     </label>
+     <label class="settings-field">
+      <span>RFCOMM channel</span>
+      <input id="thermalRfcommChannel" type="number" min="1" max="30" step="1" required>
+     </label>
+     <label class="settings-field">
+      <span>Characters per line</span>
+      <input id="thermalColumns" type="number" min="24" max="48" step="1" required>
+     </label>
+     <label class="settings-field">
+      <span>Print-head width (dots)</span>
+      <input id="thermalPaperWidth" type="number" min="256" max="576" step="8" required>
+     </label>
+     <label class="settings-field">
+      <span>QR preview size (dots)</span>
+      <input id="thermalQrSize" type="number" min="96" max="240" step="8" required>
+     </label>
+    </div>
+
+    <div class="margin-actions">
+     <button id="previewThermalBtn" type="button" class="secondary-button">Preview Current Card</button>
+    </div>
+    <div id="thermalPreviewWrap" class="thermal-preview hidden">
+     <img id="thermalPreviewImage" alt="58 mm thermal receipt preview">
+    </div>
+   </div>
+
+   <div id="photoPrinterNote" class="settings-note">
+    Photo printing keeps the existing full-card image renderer and Bluetooth
+    transfer workflow.
+   </div>
+
+   <div class="margin-actions">
+    <button id="savePrinterModeBtn" type="submit">Save Printer Settings</button>
+   </div>
+   <div id="printerModeStatus" class="settings-note margin-message" aria-live="polite"></div>
+  </form>
+  <!-- MOMIR_THERMAL_PRINTER_SETTINGS_END -->
+
+
+      <div id="photoPrinterSettings" class="printer-margin-settings">
         <h3>Print Margins</h3>
         <p class="settings-note">
           Values are pixels on the 450 × 730 print canvas. Larger values move
@@ -137,6 +205,6 @@
     </section>
   </main>
 
-  <script src="/static/settings.js?v=2"></script>
+  <script src="/static/settings.js?v=3"></script>
 </body>
 </html>

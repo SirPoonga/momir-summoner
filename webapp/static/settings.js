@@ -91,6 +91,137 @@ async function refreshDashboard() {
   }
 }
 
+// MOMIR_THERMAL_PRINTER_SETTINGS_START
+let thermalPreviewObjectUrl = null;
+
+function showPrinterModeMessage(message = "", kind = "") {
+  const element = byId("printerModeStatus");
+  element.textContent = message;
+  element.className = `settings-note margin-message ${kind}`.trim();
+}
+
+function setPrinterTypeVisibility(type) {
+  const isThermal = type === "thermal_58mm";
+  byId("thermalPrinterSettings").classList.toggle("hidden", !isThermal);
+  byId("photoPrinterSettings").classList.toggle("hidden", isThermal);
+  byId("photoPrinterNote").classList.toggle("hidden", isThermal);
+}
+
+function fillPrinterSettings(settings = {}) {
+  const thermal = settings.thermal || {};
+  byId("printerType").value = settings.type || "photo";
+  byId("thermalTransport").value =
+    thermal.transport || "bluetooth_rfcomm";
+  byId("thermalBluetoothAddress").value =
+    thermal.bluetooth_address || "10:22:33:05:45:58";
+  byId("thermalRfcommChannel").value =
+    thermal.rfcomm_channel ?? 1;
+  byId("thermalColumns").value = thermal.columns ?? 32;
+  byId("thermalPaperWidth").value =
+    thermal.paper_width_pixels ?? 384;
+  byId("thermalQrSize").value =
+    thermal.qr_size_pixels ?? 144;
+  setPrinterTypeVisibility(byId("printerType").value);
+}
+
+function printerSettingsValues() {
+  return {
+    type: byId("printerType").value,
+    thermal: {
+      transport: byId("thermalTransport").value,
+      bluetooth_address:
+        byId("thermalBluetoothAddress").value.trim(),
+      rfcomm_channel:
+        Number(byId("thermalRfcommChannel").value),
+      columns: Number(byId("thermalColumns").value),
+      paper_width_pixels:
+        Number(byId("thermalPaperWidth").value),
+      qr_size_pixels:
+        Number(byId("thermalQrSize").value),
+    },
+  };
+}
+
+async function loadPrinterSettings() {
+  try {
+    const data = await requestJson("/api/printer/settings");
+    fillPrinterSettings(data.settings || {});
+    showPrinterModeMessage();
+  } catch (error) {
+    showPrinterModeMessage(
+      error.message || "Could not load printer settings.",
+      "error",
+    );
+  }
+}
+
+async function savePrinterMode(event) {
+  event.preventDefault();
+  const button = byId("savePrinterModeBtn");
+  button.disabled = true;
+  showPrinterModeMessage("Saving printer settings...");
+  try {
+    const data = await requestJson("/api/printer/settings", {
+      method: "PUT",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({settings: printerSettingsValues()}),
+    });
+    fillPrinterSettings(data.settings || {});
+    const thermal = data.settings.thermal || {};
+    let message = "Photo printer mode saved.";
+    if (data.settings.type === "thermal_58mm") {
+      message =
+        thermal.transport === "bluetooth_rfcomm"
+          ? `Bluetooth thermal printer saved: ${thermal.bluetooth_address}, channel ${thermal.rfcomm_channel}.`
+          : "Thermal mock mode saved.";
+    }
+    showPrinterModeMessage(message, "success");
+    await refreshDashboard();
+  } catch (error) {
+    showPrinterModeMessage(
+      error.message || "Could not save printer settings.",
+      "error",
+    );
+  } finally {
+    button.disabled = false;
+  }
+}
+
+async function previewCurrentThermalCard() {
+  const button = byId("previewThermalBtn");
+  const wrap = byId("thermalPreviewWrap");
+  const image = byId("thermalPreviewImage");
+  button.disabled = true;
+  showPrinterModeMessage("Rendering current card...");
+  try {
+    const response = await fetch(
+      `/preview/thermal/current.png?t=${Date.now()}`,
+      {cache: "no-store"},
+    );
+    if (!response.ok) {
+      const message = await response.text();
+      throw new Error(message || "No current card is selected.");
+    }
+    const blob = await response.blob();
+    if (thermalPreviewObjectUrl) {
+      URL.revokeObjectURL(thermalPreviewObjectUrl);
+    }
+    thermalPreviewObjectUrl = URL.createObjectURL(blob);
+    image.src = thermalPreviewObjectUrl;
+    wrap.classList.remove("hidden");
+    showPrinterModeMessage("Thermal preview rendered.", "success");
+  } catch (error) {
+    wrap.classList.add("hidden");
+    showPrinterModeMessage(
+      error.message || "Could not render a thermal preview.",
+      "error",
+    );
+  } finally {
+    button.disabled = false;
+  }
+}
+// MOMIR_THERMAL_PRINTER_SETTINGS_END
+
 function fillMarginFields(margins) {
   byId("marginLeft").value = margins.left;
   byId("marginTop").value = margins.top;
@@ -246,6 +377,7 @@ async function refreshAll() {
     refreshDashboard(),
     refreshCardUpdateStatus(),
     loadPrinterMargins(),
+    loadPrinterSettings(),
   ]);
   button.disabled = false;
 }
@@ -254,6 +386,12 @@ function initSettings() {
   byId("refreshSettingsBtn").addEventListener("click", refreshAll);
   byId("updateCardsBtn").addEventListener("click", startCardUpdate);
   byId("printerMarginForm").addEventListener("submit", savePrinterMargins);
+  byId("printerModeForm").addEventListener("submit", savePrinterMode);
+  byId("printerType").addEventListener("change", (event) => {
+    setPrinterTypeVisibility(event.target.value);
+    showPrinterModeMessage();
+  });
+  byId("previewThermalBtn").addEventListener("click", previewCurrentThermalCard);
   byId("defaultPrinterMarginsBtn").addEventListener("click", restoreDefaultMargins);
   refreshAll();
   setInterval(() => {

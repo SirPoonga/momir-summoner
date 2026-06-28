@@ -9,17 +9,21 @@ if str(ROOT) not in sys.path:
 from flask import Flask, jsonify, render_template, request, send_file
 from momir_config import (
     get_printer_margins,
+    get_printer_settings,
     get_web_host,
     get_web_port,
     save_printer_margins,
+    save_printer_settings,
 )
 
 from momir_adapter import (
     card_details,
+    clear_printer_status_cache,
     card_update_status,
     dashboard_status,
     network_status,
     preview_card,
+    preview_current_thermal,
     printer_status,
     print_back_current,
     print_last,
@@ -97,6 +101,29 @@ def api_printer_margins():
     return jsonify({"ok": True, "margins": margins})
 
 
+# MOMIR_THERMAL_PRINTER_API_START
+@app.route("/api/printer/settings", methods=["GET", "PUT"])
+def api_printer_settings():
+    if request.method == "GET":
+        try:
+            return jsonify({"ok": True, "settings": get_printer_settings()})
+        except RuntimeError as exc:
+            return jsonify({"ok": False, "error": str(exc)}), 400
+
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return jsonify({"ok": False, "error": "A JSON object is required."}), 400
+
+    values = data.get("settings", data)
+    try:
+        settings = save_printer_settings(values)
+        clear_printer_status_cache()
+    except RuntimeError as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 400
+    return jsonify({"ok": True, "settings": settings})
+# MOMIR_THERMAL_PRINTER_API_END
+
+
 @app.get("/api/status")
 def api_status():
     return jsonify(status())
@@ -161,6 +188,21 @@ def api_search():
     if not q:
         return jsonify([])
     return jsonify(search(q))
+
+
+# MOMIR_THERMAL_PRINTER_PREVIEW_START
+@app.get("/preview/thermal/current.png")
+def preview_current_thermal_image():
+    path = preview_current_thermal()
+    if not path or not Path(path).exists():
+        return ("No current card is selected.", 404)
+    return send_file(
+        path,
+        mimetype="image/png",
+        conditional=True,
+        max_age=0,
+    )
+# MOMIR_THERMAL_PRINTER_PREVIEW_END
 
 
 @app.get("/preview/card/<card_id>.jpg")

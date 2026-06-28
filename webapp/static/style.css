@@ -609,3 +609,51 @@ input {
     grid-template-columns: 1fr;
   }
 }
+
+/* MOMIR_THERMAL_PRINTER_SETTINGS_START */
+.printer-mode-settings {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border, #444);
+}
+
+.settings-field {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0.65rem 0;
+}
+
+.settings-field span {
+  font-weight: 700;
+}
+
+.settings-field input,
+.settings-field select {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 2.65rem;
+  padding: 0.55rem 0.65rem;
+  font: inherit;
+}
+
+.thermal-settings-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: 0.65rem;
+}
+
+.thermal-preview {
+  margin-top: 1rem;
+  overflow-x: auto;
+  text-align: center;
+}
+
+.thermal-preview img {
+  display: inline-block;
+  width: min(100%, 384px);
+  height: auto;
+  background: #fff;
+  border: 1px solid #777;
+  image-rendering: crisp-edges;
+}
+/* MOMIR_THERMAL_PRINTER_SETTINGS_END */
