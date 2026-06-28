@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="48%" cy="40%" r="75%">
+      <stop offset="0" stop-color="#25564a"/>
+      <stop offset="1" stop-color="#15342b"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="92" fill="url(#bg)"/>
+  <rect x="12" y="12" width="488" height="488" rx="82" fill="none" stroke="#70b28b" stroke-opacity=".45" stroke-width="5"/>
+  <path d="M146 118l198-24 30 257-198 24z" fill="#2f6953" stroke="#9ad5b2" stroke-width="5"/>
+  <rect x="124" y="104" width="236" height="294" rx="25" fill="#f4f7f1" stroke="#fff" stroke-width="6"/>
+  <rect x="150" y="135" width="184" height="135" rx="16" fill="#173e33"/>
+  <circle cx="242" cy="203" r="58" fill="#3ea77b" stroke="#b1efcc" stroke-width="6"/>
+  <circle cx="242" cy="203" r="24" fill="#dcffeb"/>
+  <text x="242" y="231" text-anchor="middle" font-family="Arial,sans-serif" font-size="82" font-weight="700" fill="#144532">M</text>
+  <rect x="150" y="300" width="144" height="8" rx="4" fill="#416d5a"/>
+  <rect x="150" y="327" width="128" height="8" rx="4" fill="#416d5a"/>
+  <rect x="150" y="354" width="92" height="8" rx="4" fill="#416d5a"/>
+</svg>
