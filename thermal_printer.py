@@ -64,11 +64,17 @@ def normalize_thermal_text(value: object) -> str:
     return "\n".join(line.rstrip() for line in text.split("\n")).strip()
 
 
-def local_card_url(card: dict) -> str:
-    base = get_local_base_url()
-    card_id = quote(str(card.get("id") or ""), safe="")
-    return f"{base}/card/{card_id}" if card_id else base
+def scryfall_card_url(card: dict) -> str:
+    """Exact Scryfall page encoded in the native thermal QR code."""
+    uri = str(card.get("scryfall_uri") or "").strip()
+    if uri:
+        return uri
 
+    card_name = str(card.get("name") or "").strip()
+    if card_name:
+        return f"https://scryfall.com/search?q={quote(card_name)}"
+
+    return "https://scryfall.com/"
 
 def _wrap_paragraph(text: str, columns: int) -> list[str]:
     if not text.strip():
@@ -148,7 +154,7 @@ def build_thermal_job(card: dict, settings: dict | None = None) -> dict:
     settings = dict(settings or get_thermal_printer_settings())
     return {
         "lines": format_thermal_lines(card, settings["columns"]),
-        "qr_url": local_card_url(card),
+        "qr_url": scryfall_card_url(card),
         "settings": settings,
     }
 
@@ -444,7 +450,7 @@ def build_bluetooth_escpos_payload(
     oracle_text = normalize_thermal_text(card.get("oracle_text"))
     power = normalize_thermal_text(card.get("power")) or "?"
     toughness = normalize_thermal_text(card.get("toughness")) or "?"
-    qr_url = local_card_url(card)
+    qr_url = scryfall_card_url(card)
 
     output = bytearray()
     output += b"\x1b\x40"
@@ -574,7 +580,7 @@ def print_bluetooth_rfcomm(
         "address": address,
         "channel": channel,
         "bytes_sent": len(payload),
-        "qr_url": local_card_url(card),
+        "qr_url": scryfall_card_url(card),
         "physical_print": True,
     }
 
