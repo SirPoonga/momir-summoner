@@ -218,7 +218,25 @@ class ThermalPrinterTests(unittest.TestCase):
                 self.closed = True
 
         fake = FakeSocket()
-        with patch.object(thermal_printer.socket, "socket", return_value=fake):
+        with (
+            patch.object(
+                thermal_printer.socket,
+                "AF_BLUETOOTH",
+                31,
+                create=True,
+            ),
+            patch.object(
+                thermal_printer.socket,
+                "BTPROTO_RFCOMM",
+                3,
+                create=True,
+            ),
+            patch.object(
+                thermal_printer.socket,
+                "socket",
+                return_value=fake,
+            ),
+        ):
             result = thermal_printer.print_bluetooth_rfcomm(SAMPLE_CARD, settings)
 
         self.assertTrue(result["ok"])
