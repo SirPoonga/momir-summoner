@@ -5,12 +5,13 @@ Momir Summoner is a Raspberry Pi-hosted web application for running a physical *
 The Raspberry Pi performs the application, database, rendering, and printing work. The phone or other device is only used as the controller.
 
 > [!NOTE]
-> The simplest current network setup is to connect the Raspberry Pi and controller device to the same Wi-Fi network. A phone-hotspot option and an optional Tailscale setup are documented below. Instructions for a dual-Wi-Fi setup using a USB Wi-Fi adapter will be added after that configuration has been tested.
+> Momir Summoner can run on a normal Wi-Fi network or on the tested dual-Wi-Fi setup. In the dual-Wi-Fi configuration, the Raspberry Pi's built-in adapter (`wlan0`) provides the permanent `Momir` hotspot at `10.42.0.1`, while a USB adapter (`wlan1`) connects the Pi to an internet-enabled Wi-Fi network.
 
 ## Current Features
 
 - Mobile-friendly gameplay interface
 - Dedicated Settings page for printer status, network information, card-database statistics and updates, and system status
+- Installable home-screen/PWA icon named **Momir Summoner** for phones and tablets
 - Compact printer-readiness icon in the gameplay header
 - Mana values 1 through 16
 - Random front-face creature selection by mana value
@@ -47,7 +48,7 @@ The Raspberry Pi performs the application, database, rendering, and printing wor
 ### Optional
 
 - Tailscale account for reliable private addressing
-- USB Wi-Fi adapter for the planned dual-Wi-Fi configuration
+- USB Wi-Fi adapter for the tested dual-Wi-Fi configuration (`wlan1` internet uplink while `wlan0` hosts the `Momir` network)
 
 The current implementation has been tested with a Polaroid Mint-compatible Bluetooth photo printer. The print transport sends generated JPEG files through Bluetooth OBEX FTP. Supporting another printer may require changes to the renderer or print transport.
 
@@ -698,6 +699,55 @@ Momir Summoner is an independent fan-made project and is not affiliated with, en
 
 The project source code is licensed under the GNU General Public License v3.0 only (`GPL-3.0-only`). See [LICENSE](LICENSE).
 
+<!-- MOMIR_CURRENT_SETUP_START -->
+## Tested dual-Wi-Fi setup
+
+The tested portable network configuration keeps the game available even when
+no normal Wi-Fi network is present:
+
+- `wlan0` — the Raspberry Pi's built-in Wi-Fi adapter. It hosts the permanent
+  `Momir` wireless network.
+- `wlan1` — a USB Wi-Fi adapter. It connects the Pi to home Wi-Fi or another
+  internet-enabled network.
+- Hotspot address — `10.42.0.1/24`.
+- Hotspot URL — open `http://10.42.0.1/` while connected to the `Momir`
+  wireless network.
+- Normal-network URL — open `http://momir.local:5000/` while the controller
+  device and Pi are connected to the same regular Wi-Fi network.
+
+The hotspot uses `hostapd`, `dnsmasq`, IP forwarding/NAT, and a small port-80
+captive-portal proxy. The application itself continues to run on port `5000`.
+Automatic captive-portal opening varies by phone and tablet, so a saved
+bookmark or home-screen icon is the most reliable launch method.
+
+Useful verification commands:
+
+```bash
+ip -br addr show wlan0 wlan1
+sudo systemctl is-active momir-hotspot-network.service
+sudo systemctl is-active momir-hostapd.service
+sudo systemctl is-active momir-dnsmasq.service
+sudo systemctl is-active momir-captive-portal.service
+curl -I http://127.0.0.1:5000/
+```
+
+The tested hotspot configuration files are stored under
+`/etc/momir-hotspot/`, and the captive-portal proxy is installed at
+`/usr/local/sbin/momir-captive-portal.py`.
+
+## Add Momir Summoner to a phone or tablet home screen
+
+Open Momir Summoner in the device browser, then use the browser's
+**Add to Home screen** or **Install app** command. The installed shortcut uses
+the name **Momir Summoner** and the icons provided by:
+
+- `webapp/static/manifest.webmanifest`
+- `webapp/static/icons/`
+
+Using the home-screen shortcut is recommended on the dedicated hotspot because
+some devices do not automatically open their captive-portal window.
+<!-- MOMIR_CURRENT_SETUP_END -->
+
 <!-- MOMIR_THERMAL_PRINTER_START -->
 ## Printer types and 58 mm thermal printing
 
@@ -726,4 +776,22 @@ for each print and sends native ESC/POS text and native QR commands.
 
 Mock mode remains available by setting `transport` to `mock`. Mock jobs are
 saved under `prints/thermal-mock/`.
+<!-- MOMIR_THERMAL_DETAILS_START -->
+### Thermal QR targets and printed-state behavior
+
+The native 58 mm thermal slip includes a QR code that opens the card's exact
+Scryfall page using the stored `scryfall_uri`. If that URI is unavailable, the
+application falls back to a Scryfall search for the card name. Opening the QR
+code requires internet access; printing the locally stored card information
+does not.
+
+Each configured printer has its own **Mark card as printed** option. Its
+default value is **No**, so printing through a newly configured printer does
+not change the card's printed state unless that option is explicitly enabled.
+The manual **Mark as Printed** control remains available on the main screen.
+
+Thermal printing is an additional printer type. Existing photo-printer support
+remains available and is not replaced by the thermal workflow.
+<!-- MOMIR_THERMAL_DETAILS_END -->
+
 <!-- MOMIR_THERMAL_PRINTER_END -->
