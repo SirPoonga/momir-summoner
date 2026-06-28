@@ -505,6 +505,25 @@ Follow live logs:
 journalctl -u momir-summoner.service -f
 ```
 
+<!-- MOMIR_DUAL_WIFI_START -->
+## Optional dual-Wi-Fi hotspot
+
+Momir can use the Raspberry Pi's built-in Wi-Fi as a permanent `Momir` access point while a USB Wi-Fi adapter connects to home Wi-Fi or another upstream network.
+
+```text
+wlan0  Built-in Wi-Fi  -> Momir hotspot
+wlan1  USB Wi-Fi       -> Internet for updates
+```
+
+After joining the `Momir` network, open:
+
+```text
+http://10.42.0.1:5000
+```
+
+An optional captive portal can automatically open the Momir interface, or display a **Sign in to Momir** notification. Setup, helper scripts, interface checks, and troubleshooting are documented in [Dual-Wi-Fi hotspot setup](docs/dual-wifi-hotspot.md).
+<!-- MOMIR_DUAL_WIFI_END -->
+
 ## Troubleshooting
 
 ### The phone cannot open the page
