@@ -1,6 +1,14 @@
 <!doctype html>
 <html>
 <head>
+<!-- MOMIR_APP_ICONS -->
+<link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}?v=3">
+<link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='icons/favicon-32.png') }}">
+<link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}">
+<meta name="theme-color" content="#15342b">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Momir Summoner">
   <meta charset="utf-8">
   <title>{{ card.name }} — Momir</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
